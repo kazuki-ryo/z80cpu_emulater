@@ -1,89 +1,40 @@
 #define DEBUG_VIEW 1
 #include"z80.c"
 
-/*
-
-unsigned char SampleData[256]={
-	0,//NOP
-	0x3e,0x00,//LD A,1		00 111 110,00000001
-	0x06,0x00,//LD B,2		00 000 110,00000010
-	0x80,//ADD A,B		10000 000
-	0x76, //HALT 	01110110
-	
-	0x21,0x34,0x12, //LD HL,1234h 00 10 0001,00110100,00010010
-	0xe5,// PUSH HL 11 10 0101
-	0x21,0x78,0x56, //LD HL,5678h 00 10 0001,01111000,01010110
-	0xe3, //EX (SP),HL 11100011
-	0x76, //HALT 	01110110
-
-	0x06,1,//LD B,1		00 000 110,00000001
-	0x0E,2,//LD C,2		00 001 110,00000010
-	0x16,3,//LD D,1		00 010 110,00000001
-	0x1E,4,//LD E,2		00 011 110,00000010
-	0x26,5,//LD H,1		00 100 110,00000001
-	0x2E,6,//LD L,2		00 101 110,00000010
-	0xd9, //EXX		11011001
-	0xeb,  //EX DE,HL		11101011
-	0x08, //EX AF,AF'		00001000
-
-	0x76, //HALT 01110110
-
-	0x3, //INC BC		00 00 0011
-	0xc, //INC C		00 001 100 
-	0xcd,0x0d,0,//CALL 	11001101,00001101,0
-	0xc3,0x10,00,//JP 0000	11000011,00010000,00000000
-	0,
-	0,
-	0xc9,//RET
-	0,
-	0xc5, // PUSH BC		11 00 0101
-	0xe1, // POP HL		11 10 0001
-	0xe5,//PUSH HL		11 10 0101
-	0xf1, //POP AF      11110001
-	0xf5,// PUSH AF		11110101
-	0xd1, // POP DE		11 01 0001
-	0x3e,1,//LD A,1		00 111 110,00000001
-	0xed,0x79,//OUT (C),A		11101101,01 111 001
-	0xed,0x49,//OUT (C),C		11101101,01 001 001
-	0x76, //HALT 01110110
-	0xc9//RET
-};
-*/
-
 /**
-‚P–½—ßƒeƒXƒgŽÀs
-initRegs=1‚ÌŽž‰Šú’lÝ’è
-op=ŽÀs‚·‚é–½—ßi•¶Žš—ñj
-code1`4=‚SƒoƒCƒg•ª‚Ì–½—ßÝ’è
+ï¼‘å‘½ä»¤ãƒ†ã‚¹ãƒˆå®Ÿè¡Œ
+initRegs=1ã®æ™‚åˆæœŸå€¤è¨­å®š
+op=å®Ÿè¡Œã™ã‚‹å‘½ä»¤ï¼ˆæ–‡å­—åˆ—ï¼‰
+code1ï½ž4=ï¼”ãƒã‚¤ãƒˆåˆ†ã®å‘½ä»¤è¨­å®š
 */
 int TestCode(int initRegs,char* op,unsigned char code1,unsigned char code2,unsigned char code3,unsigned char code4)
 {
-	//ƒŒƒWƒXƒ^‰Šú‰»
+	//ãƒ¬ã‚¸ã‚¹ã‚¿åˆæœŸåŒ–
 	if(initRegs==1){
 		InitRegister();
 	}
-	//ŽÀs‚·‚éƒR[ƒh
+	//å®Ÿè¡Œã™ã‚‹ã‚³ãƒ¼ãƒ‰
 	#if DEBUG_VIEW
 	printf("OP CODE=%s\n",op);
 	#endif
-	//ƒƒ‚ƒŠ‚ÉƒeƒXƒgƒf[ƒ^Ý’è
+	//ãƒ¡ãƒ¢ãƒªã«ãƒ†ã‚¹ãƒˆãƒ‡ãƒ¼ã‚¿è¨­å®š
 	WorkMemory[0]=code1;
 	WorkMemory[1]=code2;
 	WorkMemory[2]=code3;
 	WorkMemory[3]=code4;
-	//PC ƒŒƒWƒXƒ^‚ð‰ŠúˆÊ’u‚ÉÝ’è
+	//PC ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’åˆæœŸä½ç½®ã«è¨­å®š
 	PC_REG=0;
-	//SP ƒŒƒWƒXƒ^‚ð‰ŠúˆÊ’u‚ÉÝ’è
+	//SP ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’åˆæœŸä½ç½®ã«è¨­å®š
 	SP_REG=0x3ffe;
-	//1–½—ß“Ç‚Ýž‚Ý
+	//1å‘½ä»¤èª­ã¿è¾¼ã¿
 	unsigned char code=Memory(PC_REG);
-	//ƒR[ƒh‰ðÍ
+	//ã‚³ãƒ¼ãƒ‰è§£æž
 	int State=CodeAnalysis(code,0,HL_REG,H_REG,L_REG);
-	//PCƒJƒEƒ“ƒgƒAƒbƒv
+	//PCã‚«ã‚¦ãƒ³ãƒˆã‚¢ãƒƒãƒ—
 	PC_REG=(PC_REG+1)&0xffff;
 
-	//ŽÀsŒ‹‰Ê
-	//ƒƒ‚ƒŠ•\Ž¦iƒfƒoƒbƒO—p)
+	//å®Ÿè¡Œçµæžœ
+	//ãƒ¡ãƒ¢ãƒªè¡¨ç¤ºï¼ˆãƒ‡ãƒãƒƒã‚°ç”¨)
 	#if DEBUG_VIEW
 	ViewRegister();
 	ViewMemory();
@@ -91,16 +42,15 @@ int TestCode(int initRegs,char* op,unsigned char code1,unsigned char code2,unsig
 	return 0;
 }
 
-int ErrorCount=0;//Ž¸”s”
-int SuccessCount=0;//¬Œ÷”
+int ErrorCount=0;//å¤±æ•—æ•°
+int SuccessCount=0;//æˆåŠŸæ•°
 /**
-ƒR[ƒh”»’è
-result=ƒŒƒWƒXƒ^‚È‚Ç‚Ì’l‚ÌŒ‹‰Ê‚ð“ü‚ê‚é
-“à•”‚Å¬Œ÷EŽ¸”s‚ÌŒ”‚ðƒJƒEƒ“ƒg‚·‚éB
+ã‚³ãƒ¼ãƒ‰åˆ¤å®š
+result=ãƒ¬ã‚¸ã‚¹ã‚¿ãªã©ã®å€¤ã®çµæžœã‚’å…¥ã‚Œã‚‹
+å†…éƒ¨ã§æˆåŠŸãƒ»å¤±æ•—ã®ä»¶æ•°ã‚’ã‚«ã‚¦ãƒ³ãƒˆã™ã‚‹ã€‚
 */
 int CheckCode(int result)
-{
-	
+{	
 	if(result!=0){
 		SuccessCount++;
 		printf(" OK\n");
@@ -113,25 +63,25 @@ int CheckCode(int result)
 unsigned char _WorkMemory[65536];//MAIN Memory
 unsigned char _IOMemory[256];//I/O AREA
 /*
-ƒƒ‚ƒŠƒ}ƒbƒp[‘Î‰ž
+ãƒ¡ãƒ¢ãƒªãƒžãƒƒãƒ‘ãƒ¼å¯¾å¿œ
 unsigned char map[]=|3,2,1,0};
 unsigned short int Adr=0x8000;
 //0x3fc000;//24 bit(MAX 4MB)
 char page=(Adr & 0xc0)>>6;
 unsigned char mapdata=_WorkMemory[Adr | (map[page]<<12)];
 unsigned char slotdata=_WorkMemory[Adr | (slot[page]<<12)];
-ƒXƒƒbƒgØ‚è‘Ö‚¦‚à“¯‚¶•ûŽ®‚Å‘Î‰ž‚·‚éB
+ã‚¹ãƒ­ãƒƒãƒˆåˆ‡ã‚Šæ›¿ãˆã‚‚åŒã˜æ–¹å¼ã§å¯¾å¿œã™ã‚‹ã€‚
 slotmode[4*4]= 0=RAM 1=ROM
 slotselect[4]=slotnum
-‚±‚ê‚¾‚Æ•ªŠò‘‚¦‚é‚Ì‚ÅˆÈ‰º‚Ì‚æ‚¤‚É‚·‚é‚©
-map=0`63=SLOT
-64`254+64=Map
-pico‚ÍÅ‘å256kb‚È‚Ì‚Å
-96kbŽg‚¤‚Æ‚µ‚Äƒy[ƒW6‚Ü‚ÅÝ’è
+ã“ã‚Œã ã¨åˆ†å²å¢—ãˆã‚‹ã®ã§ä»¥ä¸‹ã®ã‚ˆã†ã«ã™ã‚‹ã‹
+map=0ï½ž63=SLOT
+64ï½ž254+64=Map
+picoã¯æœ€å¤§256kbãªã®ã§
+96kbä½¿ã†ã¨ã—ã¦ãƒšãƒ¼ã‚¸6ã¾ã§è¨­å®š
 RAM=64
 ROM=32
 VRAM=16+32
-‡Œv144KB
+åˆè¨ˆ144KB
 */
 
 int main(int argc,char* argv[])
@@ -699,7 +649,7 @@ int main(int argc,char* argv[])
 
 	
 	//
-	//ƒeƒXƒg‚Ì‘‡Œ‹‰Ê
+	//ãƒ†ã‚¹ãƒˆã®ç·åˆçµæžœ
 	printf("-----------------------------\n");
 	printf("Test Result \n");
 	printf("Success Count=%d\n",SuccessCount);
