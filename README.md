@@ -62,10 +62,10 @@ msxpenのBASICコードは以下を記載して実行する。
 
 |No.|環境|実行時間[sec]|Z80比率|Z80換算クロック|
 |:--|:--|:--|:--|:--|
-|1|MSXPEN MSX2+|5.6|1|3.58MHz|
-|2|MSXPEN turboR ※1|0.86|6.6|23.64MHz|
-|3|RaspberryPI pico|3.9|1.45|5.21MHz|
-|4|Ubuntu(1.6GHz) ※1※2|0.15|37.86|135.56MHz|
+|1|MSXPEN MSX2+|5.6|-|3.58MHz|
+|2|MSXPEN turboR ※1|0.86|6.6倍|23.64MHz|
+|3|RaspberryPI pico|3.9|1.45倍|5.21MHz|
+|4|Ubuntu(1.6GHz) ※1※2|0.15|37.86倍|135.56MHz|
 
 ※1 R800またはubuntuでは早すぎて計測できないため実行回数を増やして時間を求める。
 ※2 PC(Windows10,Pentium 4415Y 1.6GHz)のWSLのubuntuで実行。
