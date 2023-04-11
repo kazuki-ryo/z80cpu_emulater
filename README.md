@@ -90,14 +90,15 @@ msxpenのBASICコードは以下を記載して実行する。
 |:--|:--|:--|:--|:--|
 |1|MSXPEN MSX2+|5.6|-|3.58MHz|
 |2|MSXPEN turboR ※1|0.86|6.6倍|23.64MHz|
-|3|RaspberryPI pico※3|4.1|1.38倍|4.95MHz|
-|4|Ubuntu(1.6GHz) ※1※2|0.15|37.86倍|135.56MHz|
+|3|RPI pico(125MHz)|4.1|1.38倍|4.95MHz|
+|4|RPI pico(170MHz)※3|3.0|1.89倍|6.77MHz|
+|5|Ubuntu(1.6GHz) ※1※2|0.15|37.86倍|135.56MHz|
 
 ※1 PC(ubuntu)では早すぎて計測できないため実行回数を増やして時間を求める。
 
 ※2 PC(Windows10,Pentium 4415Y 1.6GHz)のWSLのubuntuで実行。
 
-※3 CPUは標準125MHz動作。
+※3 オーバークロック125MHz→170MHz動作。
 
 # 課題
 
