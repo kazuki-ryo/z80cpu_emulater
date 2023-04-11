@@ -93,7 +93,7 @@ msxpenのBASICコードは以下を記載して実行する。
 |3|RaspberryPI pico※3|3.9|1.45倍|5.21MHz|
 |4|Ubuntu(1.6GHz) ※1※2|0.15|37.86倍|135.56MHz|
 
-※1 R800またはubuntuでは早すぎて計測できないため実行回数を増やして時間を求める。
+※1 PC(ubuntu)では早すぎて計測できないため実行回数を増やして時間を求める。
 
 ※2 PC(Windows10,Pentium 4415Y 1.6GHz)のWSLのubuntuで実行。
 
