@@ -26,7 +26,6 @@ $ gcc -o z80emu.out z80emu.c
 ```
 1.実行
 ```
-```
 $ date;./z80emu.out;date
 ```
 1.実行結果
