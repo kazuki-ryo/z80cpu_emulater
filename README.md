@@ -94,9 +94,9 @@ msxpenのBASICコードは以下を記載して実行する。
 |4|RPI pico(170MHz)※3|3.0|1.89倍|6.77MHz|
 |5|Ubuntu(1.6GHz) ※1※2|0.11|51.63倍|184.85MHz|
 
-※1 PC(ubuntu)では早すぎて計測できないため実行回数を増やして時間を求める。
+※1 PC(ubuntu)では早すぎて計測できないため実行回数を200倍に増やして計測し、試験時間を1/200にして求めた。
 
-※2 PC(Windows10,Pentium 4415Y 1.6GHz)のWSLのubuntuで実行。
+※2 CPU(Pentium 4415Y 1.6GHz)のPCで実行。
 
 ※3 オーバークロック125MHz→170MHz動作。
 
