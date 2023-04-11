@@ -66,10 +66,10 @@ typedef struct
 	UNION_IY IY;
 	unsigned short SP;
 	unsigned short PC;
-	unsigned char I;//ä½¿ã‚ãªã„
-	unsigned char R;//ä½¿ã‚ãªã„
-	unsigned short IFF,IFF1,IFF2;//å‰²ã‚Šè¾¼ã¿ï¼ˆä½¿ã‚ãªã„ï¼‰
-	unsigned short AF2,BC2,DE2,HL2;//è£ãƒ¬ã‚¸ã‚¹ã‚¿
+	unsigned char I;//g‚í‚È‚¢
+	unsigned char R;//g‚í‚È‚¢
+	unsigned short IFF,IFF1,IFF2;//Š„‚è‚İig‚í‚È‚¢j
+	unsigned short AF2,BC2,DE2,HL2;//— ƒŒƒWƒXƒ^
 }REGISTER;
 
 #define C_FLAG regs.AF.BYTE.F.C

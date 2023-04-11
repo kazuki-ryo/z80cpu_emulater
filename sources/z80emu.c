@@ -2,16 +2,6 @@
 
 #include"z80.c"
 
-
-/*
-sampleの実行
-NOP
-LD C,0
-LD A,1
-OUT (C),A
-OUT (C),C
-RET
-*/
 /**
 DDD or SSS
 111 A
@@ -40,7 +30,7 @@ unsigned char SampleData[256]={
 	0x76,//HALT
 	*/
 	//ベンチマーク用１
-	0x11,10,0x00, //LD DE,10
+	0x11,0xd0,0x7, //LD DE,10
 	0x01,0x00,0x00,//LD BC,0
 	0x0b,//DEC BC
 	0x78,//LD A,B
@@ -107,19 +97,27 @@ int TaskMain()
 {
 	int i,w;
 //	for(i=0;i<1000;i++){
+	unsigned short *pc_reg,*hl_reg;
+	unsigned char *h_reg,*l_reg;
+	pc_reg=&regs.PC;
+	hl_reg=&regs.HL.SHORT;
+	h_reg=&regs.HL.BYTE.HIGH;
+	l_reg=&regs.HL.BYTE.LOW;
 	while(1){
 		//コード読み込み
+//		unsigned char code=Memory(*pc_reg);
 		unsigned char code=Memory(PC_REG);
-		HL_Flag=0;//デフォルトでHL使う
 		#if DEBUG_VIEW
 		printf("code=%x\n",code);
 		#endif
 		//コード解析
+//		char State=CodeAnalysis(code,0,*hl_reg,*h_reg,*l_reg);
 		char State=CodeAnalysis(code,0,HL_REG,H_REG,L_REG);
 		if(State==1){
 			break;//中断
 		}
 		//PCカウントアップ
+//		*pc_reg=(*pc_reg+1)&0xffff;
 		PC_REG=(PC_REG+1)&0xffff;
 		//ウェイト
 		//ステートの数値分で疑似ウェイト発生
@@ -127,7 +125,7 @@ int TaskMain()
 //			Memory(0)=Memory(0);
 //		}
 		//
-		ClockCount=ClockCount+State;
+		ClockCount=ClockCount+1;
 		//メモリ表示（デバッグ用)
 		#if DEBUG_VIEW
 

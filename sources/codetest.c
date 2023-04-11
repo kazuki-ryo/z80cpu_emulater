@@ -2,39 +2,39 @@
 #include"z80.c"
 
 /**
-ï¼‘å‘½ä»¤ãƒ†ã‚¹ãƒˆå®Ÿè¡Œ
-initRegs=1ã®æ™‚åˆæœŸå€¤è¨­å®š
-op=å®Ÿè¡Œã™ã‚‹å‘½ä»¤ï¼ˆæ–‡å­—åˆ—ï¼‰
-code1ï½ž4=ï¼”ãƒã‚¤ãƒˆåˆ†ã®å‘½ä»¤è¨­å®š
+‚P–½—ßƒeƒXƒgŽÀs
+initRegs=1‚ÌŽž‰Šú’lÝ’è
+op=ŽÀs‚·‚é–½—ßi•¶Žš—ñj
+code1`4=‚SƒoƒCƒg•ª‚Ì–½—ßÝ’è
 */
 int TestCode(int initRegs,char* op,unsigned char code1,unsigned char code2,unsigned char code3,unsigned char code4)
 {
-	//ãƒ¬ã‚¸ã‚¹ã‚¿åˆæœŸåŒ–
+	//ƒŒƒWƒXƒ^‰Šú‰»
 	if(initRegs==1){
 		InitRegister();
 	}
-	//å®Ÿè¡Œã™ã‚‹ã‚³ãƒ¼ãƒ‰
+	//ŽÀs‚·‚éƒR[ƒh
 	#if DEBUG_VIEW
 	printf("OP CODE=%s\n",op);
 	#endif
-	//ãƒ¡ãƒ¢ãƒªã«ãƒ†ã‚¹ãƒˆãƒ‡ãƒ¼ã‚¿è¨­å®š
+	//ƒƒ‚ƒŠ‚ÉƒeƒXƒgƒf[ƒ^Ý’è
 	WorkMemory[0]=code1;
 	WorkMemory[1]=code2;
 	WorkMemory[2]=code3;
 	WorkMemory[3]=code4;
-	//PC ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’åˆæœŸä½ç½®ã«è¨­å®š
+	//PC ƒŒƒWƒXƒ^‚ð‰ŠúˆÊ’u‚ÉÝ’è
 	PC_REG=0;
-	//SP ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’åˆæœŸä½ç½®ã«è¨­å®š
+	//SP ƒŒƒWƒXƒ^‚ð‰ŠúˆÊ’u‚ÉÝ’è
 	SP_REG=0x3ffe;
-	//1å‘½ä»¤èª­ã¿è¾¼ã¿
+	//1–½—ß“Ç‚Ýž‚Ý
 	unsigned char code=Memory(PC_REG);
-	//ã‚³ãƒ¼ãƒ‰è§£æž
+	//ƒR[ƒh‰ðÍ
 	int State=CodeAnalysis(code,0,HL_REG,H_REG,L_REG);
-	//PCã‚«ã‚¦ãƒ³ãƒˆã‚¢ãƒƒãƒ—
+	//PCƒJƒEƒ“ƒgƒAƒbƒv
 	PC_REG=(PC_REG+1)&0xffff;
 
-	//å®Ÿè¡Œçµæžœ
-	//ãƒ¡ãƒ¢ãƒªè¡¨ç¤ºï¼ˆãƒ‡ãƒãƒƒã‚°ç”¨)
+	//ŽÀsŒ‹‰Ê
+	//ƒƒ‚ƒŠ•\Ž¦iƒfƒoƒbƒO—p)
 	#if DEBUG_VIEW
 	ViewRegister();
 	ViewMemory();
@@ -42,55 +42,35 @@ int TestCode(int initRegs,char* op,unsigned char code1,unsigned char code2,unsig
 	return 0;
 }
 
-int ErrorCount=0;//å¤±æ•—æ•°
-int SuccessCount=0;//æˆåŠŸæ•°
+int ErrorCount=0;//Ž¸”s”
+int SuccessCount=0;//¬Œ÷”
+int ErrorUnit=0;//Ž¸”s”
 /**
-ã‚³ãƒ¼ãƒ‰åˆ¤å®š
-result=ãƒ¬ã‚¸ã‚¹ã‚¿ãªã©ã®å€¤ã®çµæžœã‚’å…¥ã‚Œã‚‹
-å†…éƒ¨ã§æˆåŠŸãƒ»å¤±æ•—ã®ä»¶æ•°ã‚’ã‚«ã‚¦ãƒ³ãƒˆã™ã‚‹ã€‚
+ƒR[ƒh”»’è
+result=ƒŒƒWƒXƒ^‚È‚Ç‚Ì’l‚ÌŒ‹‰Ê‚ð“ü‚ê‚é
+“à•”‚Å¬Œ÷EŽ¸”s‚ÌŒ”‚ðƒJƒEƒ“ƒg‚·‚éB
 */
 int CheckCode(int result)
-{	
+{
+	
 	if(result!=0){
 		SuccessCount++;
 		printf(" OK\n");
+		return 0;
 	}else{
 		printf(" NG\n");
 		ErrorCount++;
+		ErrorUnit++;
+		return 1;
 	}
 }
 
 unsigned char _WorkMemory[65536];//MAIN Memory
 unsigned char _IOMemory[256];//I/O AREA
-/*
-ãƒ¡ãƒ¢ãƒªãƒžãƒƒãƒ‘ãƒ¼å¯¾å¿œ
-unsigned char map[]=|3,2,1,0};
-unsigned short int Adr=0x8000;
-//0x3fc000;//24 bit(MAX 4MB)
-char page=(Adr & 0xc0)>>6;
-unsigned char mapdata=_WorkMemory[Adr | (map[page]<<12)];
-unsigned char slotdata=_WorkMemory[Adr | (slot[page]<<12)];
-ã‚¹ãƒ­ãƒƒãƒˆåˆ‡ã‚Šæ›¿ãˆã‚‚åŒã˜æ–¹å¼ã§å¯¾å¿œã™ã‚‹ã€‚
-slotmode[4*4]= 0=RAM 1=ROM
-slotselect[4]=slotnum
-ã“ã‚Œã ã¨åˆ†å²å¢—ãˆã‚‹ã®ã§ä»¥ä¸‹ã®ã‚ˆã†ã«ã™ã‚‹ã‹
-map=0ï½ž63=SLOT
-64ï½ž254+64=Map
-picoã¯æœ€å¤§256kbãªã®ã§
-96kbä½¿ã†ã¨ã—ã¦ãƒšãƒ¼ã‚¸6ã¾ã§è¨­å®š
-RAM=64
-ROM=32
-VRAM=16+32
-åˆè¨ˆ144KB
-*/
 
-int main(int argc,char* argv[])
+int Test_LD()
 {
-	int a;
-	printf("z80 emulater Code Test\n");
-	InitZ80(_WorkMemory,_IOMemory);
-	
-	/*
+	ErrorUnit=0;
 	//
 	printf("[TEST01]8BIT LOAD REGISTER\n");
 	//
@@ -157,6 +137,26 @@ int main(int argc,char* argv[])
 	HL_REG=0x0102;
 	TestCode(0,"LD SP,HL",0xF9,0,0,0);
 	CheckCode(SP_REG==0x0102);
+
+	//
+	HL_REG=4;
+	TestCode(0,"LD (HL),n",0x36,0x1,0x20,0x30);
+	CheckCode(Memory(0x4)==0x1);
+	//
+	IX_REG=4;
+	TestCode(0,"LD (IX+d),n",0xdd,0x36,0x1,0x20);
+	CheckCode(Memory(5)==0x20);
+	//
+	IY_REG=4;
+	TestCode(0,"LD (IY+d),n",0xfd,0x36,0x1,0x20);
+	CheckCode(Memory(5)==0x20);
+
+	return ErrorUnit;
+}
+int Test_EX()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST03]SWAP REGISTER\n");
 	//
@@ -176,6 +176,13 @@ int main(int argc,char* argv[])
 	HL_REG=0x0102;Memory(0x3ffe)=3;Memory(0x3fff)=4;
 	TestCode(0,"EX (SP),HL",0xE3,0,0,0);
 	CheckCode(Memory(0x3ffe)==2 && Memory(0x3fff)==1);
+
+	return ErrorUnit;
+}
+int Test_PUSHPOP()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST04]PUSH/POP\n");
 	//
@@ -194,6 +201,12 @@ int main(int argc,char* argv[])
 	Memory(0x3ffe)=0x7;Memory(0x3fff)=0x8;
 	TestCode(0,"POP AF",0xF1,0,0,0);
 	CheckCode(SP_REG==0x4000 && AF_REG==0x0807);
+
+	return ErrorUnit;
+}
+int Test_ROTATE()
+{
+	ErrorUnit=0;
 	//
 	printf("[TEST05]LEFT ROTATE\n");
 	//
@@ -201,9 +214,9 @@ int main(int argc,char* argv[])
 	TestCode(0,"RLCA",0x7,0,0,0);
 	CheckCode(A_REG==0x7 && C_FLAG==1);
 	//
-//	C_REG=0x83;C_FLAG=0;
-//	TestCode(0,"RLC C",0xcb,0x1,0,0);
-//	CheckCode(C_REG==0x7 && C_FLAG==1);
+	C_REG=0x83;C_FLAG=0;
+	TestCode(0,"RLC C",0xcb,0x1,0,0);
+	CheckCode(C_REG==0x7 && C_FLAG==1);
 	//
 	A_REG=0x43;C_FLAG=1;
 	TestCode(0,"RLA",0x17,0x0,0,0);
@@ -216,6 +229,19 @@ int main(int argc,char* argv[])
 	A_REG=0x42;C_FLAG=1;
 	TestCode(0,"RRA",0x1f,0x0,0,0);
 	CheckCode(A_REG==0xa1 && C_FLAG==0);
+
+	return ErrorUnit;
+}
+int Test_SHIFT()
+{
+	ErrorUnit=0;
+
+	return ErrorUnit;
+}
+int Test_CALC()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST06]ADD 8BIT\n");
 	//
@@ -278,8 +304,6 @@ int main(int argc,char* argv[])
 	HL_REG=0x02;IY_REG=4;Memory(4)=3;
 	TestCode(0,"INC (IY+d)",0xfd,0x34,0,0);
 	CheckCode(Memory(4)==0x4 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-
-	
 	//
 	printf("[TEST07]SUB 8BIT\n");
 	//
@@ -331,7 +355,7 @@ int main(int argc,char* argv[])
 	A_REG=0x4;C_FLAG=1;IX_REG=3;
 	TestCode(0,"SUB (IX+d)",0xdd,0x96,0,1);
 	CheckCode(A_REG==0x3 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	/*
+	
 	//
 	printf("[TEST08]ADD/SUB 16BIT\n");
 	//
@@ -346,6 +370,13 @@ int main(int argc,char* argv[])
 	BC_REG=0x0002;C_FLAG=1;
 	TestCode(0,"DEC BC",0x0B,0,0,0);
 	CheckCode(BC_REG==0x0001 && C_FLAG==1);
+
+	return ErrorUnit;
+}
+int Test_LOGICAL()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST10]LOGICAL \n");
 	//
@@ -396,6 +427,13 @@ int main(int argc,char* argv[])
 	A_REG=0x02;H_FLAG=0;N_FLAG=0;
 	TestCode(0,"CPL",0x2f,0,0,0);
 	CheckCode(A_REG==0x00fd && H_FLAG==1 && N_FLAG==1);
+
+	return ErrorUnit;
+}
+int Test_BIT()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST11]BIT Operation \n");
 	//
@@ -406,6 +444,47 @@ int main(int argc,char* argv[])
 	H_FLAG=1;N_FLAG=1;C_FLAG=0;
 	TestCode(0,"SCF",0x37,0,0,0);
 	CheckCode(C_FLAG==1 && H_FLAG==0 && N_FLAG==0);
+
+	//
+	B_REG=3;
+	TestCode(0,"BIT 0,B",0xcb,0x40,0x00,0x00);
+	CheckCode(Z_FLAG==1);
+	//
+	B_REG=8;
+	TestCode(0,"BIT 0,B",0xcb,0x40,0x00,0x00);
+	CheckCode(Z_FLAG==0);
+	//
+	HL_REG=3;
+	TestCode(0,"BIT b,(HL)",0xcb,0x4e,0x00,0x02);
+	CheckCode(Z_FLAG==1);
+
+	//
+	B_REG=8;
+	TestCode(0,"SET 0,B",0xcb,0xc0,0x00,0x00);
+	CheckCode(B_REG==0x09);
+	//
+	HL_REG=3;
+	TestCode(0,"SET b,(HL)",0xcb,0xce,0x00,0x01);
+	CheckCode(Memory(3)==3);
+	//
+	B_REG=7;
+	TestCode(0,"RES 0,B",0xcb,0x80,0x00,0x00);
+	CheckCode(B_REG==0x06);
+	//
+	HL_REG=3;
+	TestCode(0,"RES b,(HL)",0xcb,0x8e,0x00,0x03);
+	CheckCode(Memory(3)==1);
+	//
+	HL_REG=0;IX_REG=4;Memory(4)=1;
+	TestCode(0,"SET b,(IX+n)",0xdd,0xcb,0xce,0x00);
+	CheckCode(Memory(4)==3);
+
+	return ErrorUnit;
+}
+int Test_CP()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST12]CP Operation \n");
 	//
@@ -440,6 +519,13 @@ int main(int argc,char* argv[])
 	A_REG=0xff;
 	TestCode(0,"CP n",0xee,0x3,0x00,0x00);
 	CheckCode(A_REG==0xfc && Z_FLAG==0 && C_FLAG==0 && H_FLAG==0 && S_FLAG==1 && PV_FLAG==1);
+
+	return ErrorUnit;
+}
+int Test_JUMP()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST13]JUMP Operation \n");
 	//
@@ -481,6 +567,13 @@ int main(int argc,char* argv[])
 	Z_FLAG=1;
 	TestCode(0,"JR Z,e",0x28,0xfe,0x00,0x00);
 	CheckCode(PC_REG==0x0);
+
+	return ErrorUnit;
+}
+int Test_CALL()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST14]CALL Operation \n");
 	//
@@ -526,8 +619,38 @@ int main(int argc,char* argv[])
 	Memory(0x3ffe)=0;Memory(0x3fff)=0;
 	TestCode(0,"RET C",0xD8,0x34,0x12,0);
 	CheckCode(PC_REG==0x0000 && SP_REG==0x4000);
-	*/
-	/*
+
+	//
+	TestCode(1,"RST 00h",0xc7,0x0,0x0,0x00);
+	CheckCode(PC_REG==0);
+	//
+	TestCode(1,"RST 10h",0xd7,0x0,0x0,0x00);
+	CheckCode(PC_REG==0x10);
+	//
+	TestCode(1,"RST 20h",0xe7,0x0,0x0,0x00);
+	CheckCode(PC_REG==0x20);
+	//
+	TestCode(1,"RST 30h",0xf7,0x0,0x0,0x00);
+	CheckCode(PC_REG==0x30);
+	//
+	TestCode(1,"RST 08h",0xcf,0x0,0x0,0x00);
+	CheckCode(PC_REG==0x08);
+	//
+	TestCode(1,"RST 18h",0xdf,0x0,0x0,0x00);
+	CheckCode(PC_REG==0x18);
+	//
+	TestCode(1,"RST 28h",0xef,0x0,0x0,0x00);
+	CheckCode(PC_REG==0x28);
+	//
+	TestCode(1,"RST 38h",0xff,0x0,0x0,0x00);
+	CheckCode(PC_REG==0x38);
+
+	return ErrorUnit;
+}
+int Test_OUTIN()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST15]IN/OUT \n");
 	//
@@ -538,6 +661,13 @@ int main(int argc,char* argv[])
 	A_REG=20;IOMemory[2]=0;
 	TestCode(0,"IN (02),A",0xD3,0x2,0,0);
 	CheckCode(A_REG==20);
+
+	return ErrorUnit;
+}
+int Test_DAA()
+{
+	ErrorUnit=0;
+
 	//
 	printf("[TEST16]DAA \n");
 	//
@@ -572,84 +702,64 @@ int main(int argc,char* argv[])
 	A_REG=0xf9;H_FLAG=1;N_FLAG=1;
 	TestCode(0,"DAA",0x27,0x0,0,0);
 	CheckCode(A_REG==0x93 && C_FLAG==1);
-	//
-	HL_REG=4;
-	TestCode(0,"LD (HL),n",0x36,0x1,0x20,0x30);
-	CheckCode(Memory(0x4)==0x1);
-	//
-	IX_REG=4;
-	TestCode(0,"LD (IX+d),n",0xdd,0x36,0x1,0x20);
-	CheckCode(Memory(5)==0x20);
-	//
-	IY_REG=4;
-	TestCode(0,"LD (IY+d),n",0xfd,0x36,0x1,0x20);
-	CheckCode(Memory(5)==0x20);
-	//
-	B_REG=3;
-	TestCode(0,"BIT 0,B",0xcb,0x40,0x00,0x00);
-	CheckCode(Z_FLAG==1);
-	//
-	B_REG=8;
-	TestCode(0,"BIT 0,B",0xcb,0x40,0x00,0x00);
-	CheckCode(Z_FLAG==0);
-	//
-	HL_REG=3;
-	TestCode(0,"BIT b,(HL)",0xcb,0x4e,0x00,0x02);
-	CheckCode(Z_FLAG==1);
-	*/
-	//
-	/*
-	B_REG=8;
-	TestCode(0,"SET 0,B",0xcb,0xc0,0x00,0x00);
-	CheckCode(B_REG==0x09);
-	//
-	HL_REG=3;
-	TestCode(0,"SET b,(HL)",0xcb,0xce,0x00,0x01);
-	CheckCode(Memory(3)==3);
-	//
-	B_REG=7;
-	TestCode(0,"RES 0,B",0xcb,0x80,0x00,0x00);
-	CheckCode(B_REG==0x06);
-	//
-	HL_REG=3;
-	TestCode(0,"RES b,(HL)",0xcb,0x8e,0x00,0x03);
-	CheckCode(Memory(3)==1);
-	//
-	HL_REG=0;IX_REG=4;Memory(4)=1;
-	TestCode(0,"SET b,(IX+n)",0xdd,0xcb,0xce,0x00);
-	CheckCode(Memory(4)==3);
-*/
-	/*
-	//
-	TestCode(1,"RST 00h",0xc7,0x0,0x0,0x00);
-	CheckCode(PC_REG==0);
-	//
-	TestCode(1,"RST 10h",0xd7,0x0,0x0,0x00);
-	CheckCode(PC_REG==0x10);
-	//
-	TestCode(1,"RST 20h",0xe7,0x0,0x0,0x00);
-	CheckCode(PC_REG==0x20);
-	//
-	TestCode(1,"RST 30h",0xf7,0x0,0x0,0x00);
-	CheckCode(PC_REG==0x30);
-	//
-	TestCode(1,"RST 08h",0xcf,0x0,0x0,0x00);
-	CheckCode(PC_REG==0x08);
-	//
-	TestCode(1,"RST 18h",0xdf,0x0,0x0,0x00);
-	CheckCode(PC_REG==0x18);
-	//
-	TestCode(1,"RST 28h",0xef,0x0,0x0,0x00);
-	CheckCode(PC_REG==0x28);
-	//
-	TestCode(1,"RST 38h",0xff,0x0,0x0,0x00);
-	CheckCode(PC_REG==0x38);
-*/
 
+	return ErrorUnit;
+}
+int Test_CPU()
+{
+	ErrorUnit=0;
+
+	//
+	F_REG=0xff;
+	TestCode(0,"NOP",0x0,0x0,0,0);
+	CheckCode(F_REG==0xff );
+	//
+	TestCode(0,"DI",0xf3,0x0,0,0);
+	CheckCode(IFF1_REG==0x0 && IFF2_REG==0x0);
+	//
+	TestCode(0,"EI",0xfb,0x0,0,0);
+	CheckCode(IFF1_REG==0x1 && IFF2_REG==0x1);
+	return ErrorUnit;
+}
+int Test_BLOCK()
+{
+	ErrorUnit=0;
+
+	return ErrorUnit;
+}
+int main(int argc,char* argv[])
+{
+	int a;
+	printf("z80 emulater Code Test\n");
+	InitZ80(_WorkMemory,_IOMemory);
+	
+	int results[20]={0};
+/*
+	results[0]=Test_LD();
+	results[1]=Test_PUSHPOP();
+	results[2]=Test_EX();
+	results[3]=Test_ROTATE();
+	results[4]=Test_SHIFT();
+	*/
+	results[5]=Test_CALC();
+	results[6]=Test_LOGICAL();
+	/*
+	results[7]=Test_BIT();
+	results[8]=Test_CP();
+	results[9]=Test_JUMP();
+	results[10]=Test_CALL();
+	results[11]=Test_OUTIN();
+	results[12]=Test_CPU();
+	results[13]=Test_BLOCK();
+*/
+	printf("TEST ROTATE Error=%d\n",results[3]);
+	printf("TEST SHIFT Error=%d\n",results[4]);
+	printf("TEST CALC Error=%d\n",results[5]);
+	printf("TEST LOGICAL Error=%d\n",results[6]);
 
 	
 	//
-	//ãƒ†ã‚¹ãƒˆã®ç·åˆçµæžœ
+	//ƒeƒXƒg‚Ì‘‡Œ‹‰Ê
 	printf("-----------------------------\n");
 	printf("Test Result \n");
 	printf("Success Count=%d\n",SuccessCount);

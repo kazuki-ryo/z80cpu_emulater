@@ -1,12 +1,25 @@
 #include<stdio.h>
 #include"z80.h"
+/*
+Z80–½—ß‚ğ–|–ó‚µ‚ÄÀs‚·‚éB
+À‘•F
+EZ80–½—ß
+EDOSƒtƒ@ƒ“ƒNƒVƒ‡ƒ“i•¶š“ü—ÍAo—Íj
+E•¶š•\¦I/OiVDP)
+E•¶š•\¦BIOS(A2H)
 
+ƒIƒŠƒWƒiƒ‹ƒGƒ~ƒ…ƒŒ[ƒ^‚ğraspberrypi pico‚ÅÀs‚µ‘¬“x‚ğ”äŠr‚·‚éB
+*/
+int dummy=0;
 #if DEBUG_VIEW
 #define DEBUG_CODE(mes) printf(mes)
 #else
 #define DEBUG_CODE(mes) if(0){printf(mes);}
 #endif
 
+//z80 virtual memory
+//unsigned char WorkMemory[65536];//MAIN Memory
+//unsigned char IOMemory[256];//I/O AREA
 unsigned char* WorkMemory;//MAIN Memory
 unsigned char* IOMemory;//I/O AREA
 #define Memory(address) WorkMemory[address]
@@ -14,13 +27,16 @@ unsigned char* IOMemory;//I/O AREA
 
 #define CHAR8TO16(data) data>127?(-(256-data))&0xffff:data
 
+
+
 //
-REGISTER regs; //å…¨ãƒ¬ã‚¸ã‚¹ã‚¿
-int ClockCount=0;//ã‚¯ãƒ­ãƒƒã‚¯ã‚«ã‚¦ãƒ³ãƒˆ
-int Cycle;// å®Ÿè¡Œä¸­ã®å‘½ä»¤ã®ã‚¹ãƒ†ãƒ¼ãƒˆæ•°
+REGISTER regs; //‘SƒŒƒWƒXƒ^
+
+int ClockCount=0;//ƒNƒƒbƒNƒJƒEƒ“ƒg
+int Cycle;// Às’†‚Ì–½—ß‚ÌƒXƒe[ƒg”
 
 /**
-ãƒ•ãƒ©ã‚°ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹è¡¨ç¤º
+ƒtƒ‰ƒOƒXƒe[ƒ^ƒX•\¦
 */
 void ViewFlag()
 {
@@ -37,7 +53,7 @@ void ViewFlag()
 
 }
 /*
-ãƒ¬ã‚¸ã‚¹ã‚¿å…¨è¡¨ç¤º
+ƒŒƒWƒXƒ^‘S•\¦
 */
 void ViewRegister()
 {
@@ -57,14 +73,14 @@ void ViewMemory()
 	printf("SP[%02x %02x]\n",WorkMemory[SP_REG],WorkMemory[(SP_REG+1)&0xffff]);
 }
 /*
-ãƒ•ãƒ©ã‚°å…¨ã‚¯ãƒªã‚¢
+ƒtƒ‰ƒO‘SƒNƒŠƒA
 */
 void ClearFlag()
 {
 	regs.AF.BYTE.F.BYTE=0;
 }
 /*
-èµ·å‹•æ™‚ã®ãƒ¬ã‚¸ã‚¹ã‚¿åˆæœŸå€¤
+‹N“®‚ÌƒŒƒWƒXƒ^‰Šú’l
 */
 void InitRegister()
 {
@@ -78,20 +94,20 @@ void InitRegister()
 	SP_REG=MAX_MEMORY_SIZE;
 	I_REG=R_REG=0x00;
 	IFF_REG=IFF1_REG=IFF2_REG=0x0000;
-	//è£ãƒ¬ã‚¸ã‚¹ã‚¿
+	//— ƒŒƒWƒXƒ^
 	AF2_REG=0x0000;
 	BC2_REG=0x0000;
 	DE2_REG=0x0000;
 	HL2_REG=0x0000;
 }
 
-//ã‚³ãƒ¼ãƒ‰è§£æç”¨ãƒ¯ãƒ¼ã‚¯ãƒ¡ãƒ¢ãƒª
+//ƒR[ƒh‰ğÍ—pƒ[ƒNƒƒ‚ƒŠ
 unsigned char* DDD_PTR[8];
 unsigned char* SSS_PTR[8];
 unsigned short* RP_PTR[4];
 
 /**
-ã‚³ãƒ¼ãƒ‰è§£ææ™‚ã«å‚ç…§ã™ã‚‹ãƒ¬ã‚¸ã‚¹ã‚¿ãƒãƒƒãƒ—
+ƒR[ƒh‰ğÍ‚ÉQÆ‚·‚éƒŒƒWƒXƒ^ƒ}ƒbƒv
 */
 void SetRegisterAssress()
 {
@@ -101,7 +117,7 @@ DDD_PTR[2]=SSS_PTR[2]=&D_REG;
 DDD_PTR[3]=SSS_PTR[3]=&E_REG;
 DDD_PTR[4]=SSS_PTR[4]=&H_REG;
 DDD_PTR[5]=SSS_PTR[5]=&L_REG;
-DDD_PTR[6]=SSS_PTR[6]=&F_REG;//ãƒ€ãƒŸãƒ¼
+DDD_PTR[6]=SSS_PTR[6]=&F_REG;//ƒ_ƒ~[
 DDD_PTR[7]=SSS_PTR[7]=&A_REG;
 RP_PTR[0]=&BC_REG;
 RP_PTR[1]=&DE_REG;
@@ -110,59 +126,61 @@ RP_PTR[3]=&SP_REG;
 }
 
 /*
-åˆæœŸåŒ–ã€åˆæœŸå€¤è¨­å®š
+‰Šú‰»A‰Šú’lİ’è
 */
 void InitZ80(unsigned char* mem,unsigned char* iomem)
 {
 	int a;
-	//ãƒ¡ãƒ¢ãƒªã‚¢ãƒ‰ãƒ¬ã‚¹è¨­å®š
+	//ƒƒ‚ƒŠƒAƒhƒŒƒXİ’è
 	WorkMemory=mem;
 	IOMemory=iomem;
-	//ãƒ¬ã‚¸ã‚¹ã‚¿åˆæœŸå€¤
+	//ƒŒƒWƒXƒ^‰Šú’l
 	SetRegisterAssress();
-	//IOãƒ¡ãƒ¢ãƒªåˆæœŸåŒ–
+	//IOƒƒ‚ƒŠ‰Šú‰»
 	for(a=0;a<sizeof(IOMemory);a++){
 		IOMemory[a]=0;
 	}
 }
 /**
-åŠ ç®—å®Ÿè¡Œæ™‚ã®ãƒ•ãƒ©ã‚°è¨­å®š
-value=æ¼”ç®—å¾Œã®å€¤(16bit)
-bytes=æ¼”ç®—å‰ã®å€¤
+‰ÁZÀs‚Ìƒtƒ‰ƒOİ’è
+value=‰‰ZŒã‚Ì’l(16bit)
+bytes=‰‰Z‘O‚Ì’l
 */
 void SetFlagADDSUB16(int value,unsigned short word2,unsigned char sub)
 {
 	unsigned int word;
 	unsigned char P_Count=0,i;
 	word=(unsigned short)value & 0xffff;
-	N_FLAG=sub;//åŠ ç®—1,æ¸›ç®—0
+	N_FLAG=sub;//‰ÁZ1,Œ¸Z0
 	if(value>0xffff){C_FLAG=1;}else{C_FLAG=0;}
-	//bit3ã‹ã‚‰bit4ã«æ¡ä¸ŠãŒã‚ŠãŒã‚ã‚‹å ´åˆ
+	//bit3‚©‚çbit4‚ÉŒ…ã‚ª‚è‚ª‚ ‚éê‡
 	if((word2&0x8000)==0 && (word&0x8000)==0x8000){H_FLAG=1;}else{H_FLAG=0;}
-	//Z,P,PVã¯å¤‰åŒ–ã›ãš
+	//Z,P,PV‚Í•Ï‰»‚¹‚¸
 }
 
 /**
-åŠ ç®—å®Ÿè¡Œæ™‚ã®ãƒ•ãƒ©ã‚°è¨­å®š
-value=æ¼”ç®—å¾Œã®å€¤(16bit)
-bytes=æ¼”ç®—å‰ã®å€¤
+‰ÁZÀs‚Ìƒtƒ‰ƒOİ’è
+value=‰‰ZŒã‚Ì’l(16bit)
+bytes=‰‰Z‘O‚Ì’l
 */
 void SetFlagADD(short value,unsigned char byte2)
 {
 	unsigned char byte;
 	unsigned char P_Count=0,i;
 	byte=(unsigned char)value & 0xff;
-	N_FLAG=1;//åŠ ç®—1,æ¸›ç®—0
+	N_FLAG=1;//‰ÁZ1,Œ¸Z0
 	if(value>255){C_FLAG=1;}else{C_FLAG=0;}
 	if(byte==0){Z_FLAG=1;}else{Z_FLAG=0;}
-	if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	//if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	S_FLAG=(byte >>7);
+
 	PV_FLAG=0;
 	if(value>127){PV_FLAG=1;}
 	if(value<-128){PV_FLAG=1;}
-	//bit3ã‹ã‚‰bit4ã«æ¡ä¸ŠãŒã‚ŠãŒã‚ã‚‹å ´åˆ
+	//bit3‚©‚çbit4‚ÉŒ…ã‚ª‚è‚ª‚ ‚éê‡
 	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
 	/*
-	//è«–ç†æ¼”ç®—ã®å ´åˆã®ã¿1ã‚’ã‚«ã‚¦ãƒ³ãƒˆã™ã‚‹
+	//˜_—‰‰Z‚Ìê‡‚Ì‚İ1‚ğƒJƒEƒ“ƒg‚·‚é
 	for(i=0;i<8;i++){
 		if(byte & 1){P_Count++;}
 		byte=(byte>>1);
@@ -171,90 +189,100 @@ void SetFlagADD(short value,unsigned char byte2)
 	*/
 }
 /**
-æ¸›ç®—å®Ÿè¡Œæ™‚ã®ãƒ•ãƒ©ã‚°è¨­å®š
-value=æ¼”ç®—å¾Œã®å€¤(16bit)
-bytes=æ¼”ç®—å‰ã®å€¤
+Œ¸ZÀs‚Ìƒtƒ‰ƒOİ’è
+value=‰‰ZŒã‚Ì’l(16bit)
+bytes=‰‰Z‘O‚Ì’l
 */
 void SetFlagSUB(short value,unsigned char byte2)
 {
 	unsigned char byte;
 	unsigned char P_Count=0,i;
 	byte=(unsigned char)value & 0xff;
-	N_FLAG=1;//åŠ ç®—0,æ¸›ç®—1
+	N_FLAG=1;//‰ÁZ0,Œ¸Z1
 	if(value<0){C_FLAG=1;}else{C_FLAG=0;}
 	if(byte==0){Z_FLAG=1;}else{Z_FLAG=0;}
-	if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	//if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	S_FLAG=(byte >>7);
+
 	PV_FLAG=0;
 	printf("value=%d byte2=%d\n",value,byte2);
 	if(value>127 && byte2<128){PV_FLAG=1;}
 	if(value<-128 && byte2>127){PV_FLAG=1;}
 	if(value<128 && byte2>127){PV_FLAG=1;}
-	//bit3ã‹ã‚‰bit4ã«æ¡ä¸ŠãŒã‚ŠãŒã‚ã‚‹å ´åˆ
+	//bit3‚©‚çbit4‚ÉŒ…ã‚ª‚è‚ª‚ ‚éê‡
 //	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
 	if((byte2&8)==0 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
 }
 
 /**
-åŠ ç®—å®Ÿè¡Œæ™‚ã®ãƒ•ãƒ©ã‚°è¨­å®š
-value=æ¼”ç®—å¾Œã®å€¤(16bit)
-bytes=æ¼”ç®—å‰ã®å€¤
+‰ÁZÀs‚Ìƒtƒ‰ƒOİ’è
+value=‰‰ZŒã‚Ì’l(16bit)
+bytes=‰‰Z‘O‚Ì’l
 */
 void SetFlagINCDEC(short value,unsigned char byte2,unsigned char dec)
 {
 	unsigned char byte;
 	unsigned char P_Count=0,i;
 	byte=(unsigned char)value & 0xff;
-	N_FLAG=dec;//åŠ ç®—0,æ¸›ç®—1
+	N_FLAG=dec;//‰ÁZ0,Œ¸Z1
 	if(value>255){C_FLAG=1;}else{C_FLAG=0;}
 	if(byte==0){Z_FLAG=1;}else{Z_FLAG=0;}
-	if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	//if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	S_FLAG=(byte >>7);
 	PV_FLAG=0;
 	if(value>127){PV_FLAG=1;}
 	if(value<-128){PV_FLAG=1;}
-	//bit3ã‹ã‚‰bit4ã«æ¡ä¸ŠãŒã‚ŠãŒã‚ã‚‹å ´åˆ
+	//bit3‚©‚çbit4‚ÉŒ…ã‚ª‚è‚ª‚ ‚éê‡
 	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
 //	printf("byte=%x byte2=%x\n",byte,byte2);
 //	printf("byte=%x byte2=%x\n",byte&16,byte2&8);
 }
 /**
-è«–ç†æ¼”ç®—æ™‚ã®ãƒ•ãƒ©ã‚°è¨­å®š
-byte=æ¼”ç®—å‰ã®å€¤
+˜_—‰‰Z‚Ìƒtƒ‰ƒOİ’è
+byte=‰‰Z‘O‚Ì’l
 */
 void SetFlagANDORXOR(unsigned char byte)
 {
-	unsigned char P_Count=0,i;
+	//unsigned char P_Count=0,i;
 	if(byte==0){Z_FLAG=1;}else{Z_FLAG=0;}
-	if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	//if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
+	S_FLAG=(byte >>7);
 	H_FLAG=0;
 	PV_FLAG=0;
-	//è«–ç†æ¼”ç®—ã®å ´åˆã®ã¿1ã‚’ã‚«ã‚¦ãƒ³ãƒˆã™ã‚‹
+	//˜_—‰‰Z‚Ìê‡‚Ì‚İ1‚ğƒJƒEƒ“ƒg‚·‚é
+	/*
 	for(i=0;i<8;i++){
 		if(byte & 1){P_Count++;}
 		byte=(byte>>1);
 	}
 	//if(P_Count & 1){PV_FLAG=0;}else{PV_FLAG=1;}
 	PV_FLAG=1-(P_Count & 1);
+	*/
+	unsigned char pp;
+	pp=((byte>>4) & 0xf) ^ (byte & 0xf);
+	pp=((pp>>2) & 0x3) ^ (pp & 0x3);
+	PV_FLAG=(((pp>>1) & 0x1) ^ (pp & 0x1))^1;
 }
 
-unsigned short int HL_Flag=0;//0=HL,1=IX,2=IY
-char NextCodeIX=0,NextCodeIY=0;//æ¬¡ã«å®Ÿè¡Œã™ã‚‹ã‚³ãƒ¼ãƒ‰ã‚’IX,IYã®å‘½ä»¤ã¨ã™ã‚‹ã€‚
-
+/**
+ED code
+*/
 char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
 {
-	unsigned char mem1,mem2,mem3;//ã‚³ãƒ¼ãƒ‰ã®æ¬¡ã®ãƒ‡ãƒ¼ã‚¿
+	unsigned char mem1,mem2,mem3;//ƒR[ƒh‚ÌŸ‚Ìƒf[ƒ^
 	unsigned short word1,word2,word3;//
-	unsigned short adr1,adr2;//PUSH POP ã‚¢ãƒ‰ãƒ¬ã‚¹ç”¨
-	unsigned short pushpair;//PUSH POP ä¸€æ™‚çš„å€¤ä»£å…¥
-	unsigned char up2=code & 0xc0;//ä¸Šä½2ãƒ“ãƒƒãƒˆ
-	unsigned char up5=code & 0xf8;//ä¸Šä½5ãƒ“ãƒƒãƒˆ
-	unsigned char down3=code & 0x07;//ä¸‹ä½3ãƒ“ãƒƒãƒˆ
-	unsigned char down4=code & 0x0f;//ä¸‹ä½4ãƒ“ãƒƒãƒˆ
-	unsigned char DDD=(code>>3) & 0x7;//ä¸­3ãƒ“ãƒƒãƒˆ
-	unsigned char CCC=(code>>3) & 0x7;//ä¸­3ãƒ“ãƒƒãƒˆ
-	unsigned char SSS=code & 0x7;//ä¸‹3ãƒ“ãƒƒãƒˆ
-	unsigned char RP=(code>>4)&3;//ä¸­2ãƒ“ãƒƒãƒˆ
-	short calcvalue;//åŠ ç®—æ¸›ç®—çµæœ
-	int calcvalue32;//åŠ ç®—æ¸›ç®—çµæœ
+	unsigned short adr1,adr2;//PUSH POP ƒAƒhƒŒƒX—p
+	unsigned short pushpair;//PUSH POP ˆê“I’l‘ã“ü
+	unsigned char up2=code & 0xc0;//ãˆÊ2ƒrƒbƒg
+	unsigned char up5=code & 0xf8;//ãˆÊ5ƒrƒbƒg
+	unsigned char down3=code & 0x07;//‰ºˆÊ3ƒrƒbƒg
+	unsigned char down4=code & 0x0f;//‰ºˆÊ4ƒrƒbƒg
+	unsigned char DDD=(code>>3) & 0x7;//’†3ƒrƒbƒg
+	unsigned char CCC=(code>>3) & 0x7;//’†3ƒrƒbƒg
+	unsigned char SSS=code & 0x7;//‰º3ƒrƒbƒg
+	unsigned char RP=(code>>4)&3;//’†2ƒrƒbƒg
+	short calcvalue;//‰ÁZŒ¸ZŒ‹‰Ê
+	int calcvalue32;//‰ÁZŒ¸ZŒ‹‰Ê
 	//
 	#if DEBUG_VIEW
 	printf("DDD=%x SSS=%x RP=%x\n",DDD,SSS,RP);
@@ -270,24 +298,24 @@ unsigned char BITMASK[8]={1,2,4,8,16,32,64,128};
 unsigned char BITMASKNOT[8]={0xfe,0xfd,0xfb,0xf7,0xef,0xdf,0xbf,0x7f};
 /**
 CB CODE Executed
-ixiyflag=æ¬¡ã®1ãƒã‚¤ãƒˆã‚’+dã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã«ã™ã‚‹ã‹å‘½ä»¤ã”ã¨ã®åˆ¤æ–­ææ–™ã«ã™ã‚‹
+ixiyflag=Ÿ‚Ì1ƒoƒCƒg‚ğ+d‚Ìƒpƒ‰ƒ[ƒ^‚É‚·‚é‚©–½—ß‚²‚Æ‚Ì”»’fŞ—¿‚É‚·‚é
 */
 char CB_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
 {
-	unsigned char mem1,mem2,mem3;//ã‚³ãƒ¼ãƒ‰ã®æ¬¡ã®ãƒ‡ãƒ¼ã‚¿
+	unsigned char mem1,mem2,mem3;//ƒR[ƒh‚ÌŸ‚Ìƒf[ƒ^
 	unsigned short word1,word2,word3;//
-	unsigned short adr1,adr2;//PUSH POP ã‚¢ãƒ‰ãƒ¬ã‚¹ç”¨
-	unsigned short pushpair;//PUSH POP ä¸€æ™‚çš„å€¤ä»£å…¥
-	short calcvalue;//åŠ ç®—æ¸›ç®—çµæœ
-	int calcvalue32;//åŠ ç®—æ¸›ç®—çµæœ
+	unsigned short adr1,adr2;//PUSH POP ƒAƒhƒŒƒX—p
+	unsigned short pushpair;//PUSH POP ˆê“I’l‘ã“ü
+	short calcvalue;//‰ÁZŒ¸ZŒ‹‰Ê
+	int calcvalue32;//‰ÁZŒ¸ZŒ‹‰Ê
 
-	unsigned char up2=code & 0xc0;//ä¸Šä½2ãƒ“ãƒƒãƒˆ
-	unsigned char up5=code & 0xf8;//ä¸Šä½5ãƒ“ãƒƒãƒˆ
-	unsigned char down3=code & 0x07;//ä¸‹ä½3ãƒ“ãƒƒãƒˆ
-	unsigned char down4=code & 0x0f;//ä¸‹ä½4ãƒ“ãƒƒãƒˆ
-	unsigned char BBB=(code>>3) & 0x7;//ä¸­3ãƒ“ãƒƒãƒˆ
-	unsigned char SSS=code & 0x7;//ä¸‹3ãƒ“ãƒƒãƒˆ
-	unsigned char RP=(code>>4)&3;//ä¸­2ãƒ“ãƒƒãƒˆ
+	unsigned char up2=code & 0xc0;//ãˆÊ2ƒrƒbƒg
+	unsigned char up5=code & 0xf8;//ãˆÊ5ƒrƒbƒg
+	unsigned char down3=code & 0x07;//‰ºˆÊ3ƒrƒbƒg
+	unsigned char down4=code & 0x0f;//‰ºˆÊ4ƒrƒbƒg
+	unsigned char BBB=(code>>3) & 0x7;//’†3ƒrƒbƒg
+	unsigned char SSS=code & 0x7;//‰º3ƒrƒbƒg
+	unsigned char RP=(code>>4)&3;//’†2ƒrƒbƒg
 
 	#if DEBUG_VIEW
 	printf("CB code \n");
@@ -368,42 +396,44 @@ char CB_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 	return 0;
 }
 /**
-ï¼‘å‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹ã€‚
-æ­£å¸¸å®Ÿè¡Œã§ã‚ã‚Œã°ï¼ã‚’è¿”ã™ã€ç•°å¸¸ã§ã‚ã‚Œã°ï¼‘ã‚’è¿”ã™ã€‚
-code=å®Ÿè¡Œã™ã‚‹å‘½ä»¤ã‚³ãƒ¼ãƒ‰
-ixiyflag=æ¬¡ã®1ãƒã‚¤ãƒˆã‚’+dã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã«ã™ã‚‹ã‹å‘½ä»¤ã”ã¨ã®åˆ¤æ–­ææ–™ã«ã™ã‚‹
+‚P–½—ß‚ğÀs‚·‚éB
+³íÀs‚Å‚ ‚ê‚Î‚O‚ğ•Ô‚·AˆÙí‚Å‚ ‚ê‚Î‚P‚ğ•Ô‚·B
+code=Às‚·‚é–½—ßƒR[ƒh
+ixiyflag=Ÿ‚Ì1ƒoƒCƒg‚ğ+d‚Ìƒpƒ‰ƒ[ƒ^‚É‚·‚é‚©–½—ß‚²‚Æ‚Ì”»’fŞ—¿‚É‚·‚é
 */
 char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
 {
-	unsigned char mem1,mem2,mem3;//ã‚³ãƒ¼ãƒ‰ã®æ¬¡ã®ãƒ‡ãƒ¼ã‚¿
+	unsigned char mem1,mem2,mem3;//ƒR[ƒh‚ÌŸ‚Ìƒf[ƒ^
 	unsigned short word1,word2,word3;//
-	unsigned short adr1,adr2;//PUSH POP ã‚¢ãƒ‰ãƒ¬ã‚¹ç”¨
-	unsigned short pushpair;//PUSH POP ä¸€æ™‚çš„å€¤ä»£å…¥
-	short calcvalue;//åŠ ç®—æ¸›ç®—çµæœ
-	int calcvalue32;//åŠ ç®—æ¸›ç®—çµæœ
+	unsigned short adr1,adr2;//PUSH POP ƒAƒhƒŒƒX—p
+	unsigned short pushpair;//PUSH POP ˆê“I’l‘ã“ü
+	short calcvalue;//‰ÁZŒ¸ZŒ‹‰Ê
+	int calcvalue32;//‰ÁZŒ¸ZŒ‹‰Ê
+	unsigned char* pmem;//ƒƒ‚ƒŠƒ|ƒCƒ“ƒ^—p
 	//
 	unsigned char NextCode;
 	char Result;
 
+	Cycle=0;
 
-	//å„ªå…ˆåº¦é«˜ã„å‘½ä»¤ã‚’è§£æ
+	//—Dæ“x‚‚¢–½—ß‚ğ‰ğÍ
 	switch(code){
 		case 0://NOP
 			Cycle=4;
 			DEBUG_CODE("DEBUG NOP\n");
 			return 0;
 		break;
-			case 0x76://HALT(ã‚¨ãƒŸãƒ¥ãƒ¬ãƒ¼ã‚¿åœæ­¢ï¼‰
+			case 0x76://HALT(ƒGƒ~ƒ…ƒŒ[ƒ^’â~j
 			DEBUG_CODE("DEBUG HALT\n");
 			return 1;
 		break;
 		case 0xdd://IX operation
-			NextCodeIX=1;
-			//ã‚³ãƒ¼ãƒ‰èª­ã¿è¾¼ã¿
+			//NextCodeIX=1;
+			//ƒR[ƒh“Ç‚İ‚İ
 			PC_REG++;NextCode=Memory(PC_REG);
 			//PC_REG++;nstep=Memory(PC_REG);
 			ixiyflag=1;//IXIY FLAG
-			//ã‚³ãƒ¼ãƒ‰è§£æ
+			//ƒR[ƒh‰ğÍ
 			#if DEBUG_VIEW
 				printf("IX=%0x IY=%0x\n",IX_REG,IY_REG);
 			#endif
@@ -411,13 +441,13 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			return Result;
 		break;
 		case 0xfd://IY operation
-			NextCodeIY=1;
-			//ã‚³ãƒ¼ãƒ‰èª­ã¿è¾¼ã¿
+			//NextCodeIY=1;
+			//ƒR[ƒh“Ç‚İ‚İ
 			PC_REG++;NextCode=Memory(PC_REG);
 			//PC_REG++;nstep=Memory(PC_REG);
 			ixiyflag=1;//IXIY FLAG
 
-			//ã‚³ãƒ¼ãƒ‰è§£æ
+			//ƒR[ƒh‰ğÍ
 			#if DEBUG_VIEW
 				printf("IX=%0x IY=%0x\n",IX_REG,IY_REG);
 			#endif
@@ -427,7 +457,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 		case 0xed://
 		break;
 		case 0xcb://
-			//ã‚³ãƒ¼ãƒ‰èª­ã¿è¾¼ã¿
+			//ƒR[ƒh“Ç‚İ‚İ
 			PC_REG++;NextCode=Memory(PC_REG);
 			Result=CB_CodeAnalysis(NextCode,ixiyflag,hl_reg,h_reg,l_reg);
 			return Result;
@@ -435,27 +465,12 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 	}
 	
 	
-	unsigned char up2=code & 0xc0;//ä¸Šä½2ãƒ“ãƒƒãƒˆ
-	unsigned char up5=code & 0xf8;//ä¸Šä½5ãƒ“ãƒƒãƒˆ
-	unsigned char down3=code & 0x07;//ä¸‹ä½3ãƒ“ãƒƒãƒˆ
-	unsigned char down4=code & 0x0f;//ä¸‹ä½4ãƒ“ãƒƒãƒˆ
-	unsigned char DDD=(code>>3) & 0x7;//ä¸­3ãƒ“ãƒƒãƒˆ
-	unsigned char CCC=(code>>3) & 0x7;//ä¸­3ãƒ“ãƒƒãƒˆ
-	unsigned char SSS=code & 0x7;//ä¸‹3ãƒ“ãƒƒãƒˆ
-	unsigned char RP=(code>>4)&3;//ä¸­2ãƒ“ãƒƒãƒˆ
-
-	#if DEBUG_VIEW
-	printf("DDD=%x SSS=%x RP=%x\n",DDD,SSS,RP);
-	printf("up2=%x up5=%x \n",up2,up5);
-	printf("down3=%x down4=%x \n",down3,down4);
-	#endif
-	Cycle=0;
 
 	#if DEBUG_VIEW
 	printf("code analysis start!\n");
 	#endif
-	unsigned char Executed=1;//æœªå®Ÿè¡Œ=0
-	//ç‰¹æ®Šå‘½ä»¤ã®å®Ÿè¡Œ
+	unsigned char Executed=1;//–¢Às=0
+	//“Áê–½—ß‚ÌÀs
 	switch(code){
 		case 0x36://LD (HL),n
 			PC_REG++;mem1=Memory(PC_REG);
@@ -969,7 +984,23 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 		DEBUG_CODE("code executed\n");
 	}
 	#endif
-	//ãã®ä»–ã®å‘½ä»¤ã®åˆç†åŒ–
+
+	unsigned char up2=code & 0xc0;//ãˆÊ2ƒrƒbƒg
+	unsigned char up5=code & 0xf8;//ãˆÊ5ƒrƒbƒg
+	//unsigned char down3=code & 0x07;//‰ºˆÊ3ƒrƒbƒg
+	unsigned char down4=code & 0x0f;//‰ºˆÊ4ƒrƒbƒg
+	unsigned char DDD=(code>>3) & 0x7;//’†3ƒrƒbƒg
+	//unsigned char CCC=(code>>3) & 0x7;//’†3ƒrƒbƒg
+	unsigned char SSS=code & 0x7;//‰º3ƒrƒbƒg
+	unsigned char RP=(code>>4)&3;//’†2ƒrƒbƒg
+
+	#if DEBUG_VIEW
+	printf("DDD=%x SSS=%x RP=%x\n",DDD,SSS,RP);
+	printf("up2=%x up5=%x \n",up2,up5);
+	printf("down3=%x down4=%x \n",SSS,down4);
+	#endif
+
+	//‚»‚Ì‘¼‚Ì–½—ß‚Ì‡—‰»
 	if(Executed==0){
 //		printf("DEBUG up5=%x \n",up5);
 		Executed=1;
@@ -1023,6 +1054,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				SetFlagANDORXOR(A_REG);
 				C_FLAG=N_FLAG=0;
 				DEBUG_CODE("DEBUG OR r\n");
+				return 0;
 			break;
 			case 0xa8://XOR r
 				A_REG=A_REG ^ (*SSS_PTR[SSS]);
@@ -1041,8 +1073,10 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			break;
 		}
 	}
-	if(Executed==0){
-//		printf("DEBUG up2=%x down3=%x down4=%x\n",up2,down3,down4);
+	if(Executed==1){
+		return 0;
+	}else{
+//		printf("DEBUG up2=%x down3=%x down4=%x\n",up2,SSS,down4);
 		Executed=1;
 		switch(up2){
 			case 0x40:
@@ -1087,7 +1121,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 						DEBUG_CODE("DEBUG DEC rp\n");
 					break;
 				}
-				switch(down3){
+				switch(SSS){
 					case 0x6://LD r,n
 						PC_REG++;
 						mem1=Memory(PC_REG);
@@ -1133,11 +1167,15 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 						DEBUG_CODE("DEBUG POP rp\n");
 					break;
 				}
-				switch(down3){
+				switch(SSS){
 					case 0x2://JP cc,nn
-						mem1=Memory((PC_REG+1)& 0xffff);
-						mem2=Memory((PC_REG+2)& 0xffff);
-						switch(CCC){
+//						mem1=Memory((PC_REG+1)& 0xffff);
+//						mem2=Memory((PC_REG+2)& 0xffff);
+						mem1=Memory((unsigned short)(PC_REG+1));
+						mem2=Memory((unsigned short)(PC_REG+2));
+//						pmem=&WorkMemory[(unsigned short)(PC_REG+1)];
+//						mem1=*pmem++;mem2=*pmem;
+						switch(DDD){
 							case 0:
 								if(Z_FLAG==0){
 									PC_REG=(mem1 | (mem2<<8))-1;
@@ -1177,7 +1215,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 						Memory((SP_REG-2)& 0xffff)=(pushpair)&0xff;
 						mem1=Memory((PC_REG+1)& 0xffff);
 						mem2=Memory((PC_REG+2)& 0xffff);
-						switch(CCC){
+						switch(DDD){
 							case 0:
 								if(Z_FLAG==0){
 									PC_REG=(mem1 | (mem2<<8))-1;
@@ -1217,8 +1255,8 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 					case 0x0://RET cc
 						mem1=Memory((SP_REG)& MAX_MEMORY_SIZE);
 						mem2=Memory((SP_REG+1)& MAX_MEMORY_SIZE);
-//					printf("RET CCC=%d Z=%d C=%d\n",CCC,Z_FLAG,C_FLAG);
-						switch(CCC){
+//					printf("RET DDD=%d Z=%d C=%d\n",DDD,Z_FLAG,C_FLAG);
+						switch(DDD){
 							case 0:
 								if(Z_FLAG==0){
 									SP_REG=SP_REG+2;
