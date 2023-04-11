@@ -90,7 +90,7 @@ msxpenのBASICコードは以下を記載して実行する。
 |:--|:--|:--|:--|:--|
 |1|MSXPEN MSX2+|5.6|-|3.58MHz|
 |2|MSXPEN turboR ※1|0.86|6.6倍|23.64MHz|
-|3|RaspberryPI pico※3|3.9|1.45倍|5.21MHz|
+|3|RaspberryPI pico※3|4.1|1.38倍|4.95MHz|
 |4|Ubuntu(1.6GHz) ※1※2|0.15|37.86倍|135.56MHz|
 
 ※1 PC(ubuntu)では早すぎて計測できないため実行回数を増やして時間を求める。
