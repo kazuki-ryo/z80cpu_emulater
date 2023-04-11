@@ -32,7 +32,7 @@ $ date;./z80emu.out;date
 
 3. 実行結果
 ```
-Tue Apr 11 14:15:01 JST 2023
+Tue Apr 11 14:24:19 JST 2023
 z80 emulater v0.10
 End of Executed z80.
 AF   BC   DE   HL   IX   IY   SP   PC   AF2  BC2  DE2  HL2
@@ -42,8 +42,10 @@ I  R  IFF1 IFF2
 FLAG S,Z,Y,H,X,PV,N,C=01000100
 PC[76 00 3e 00]
 SP[00 11]
-Tue Apr 11 14:15:32 JST 2023
+Tue Apr 11 14:24:49 JST 2023
 ```
+
+※LD DE,2000の設定で実行した結果
 
 Raspberrypi pico用実行方法は準備中。
 
