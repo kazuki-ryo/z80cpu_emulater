@@ -19,11 +19,34 @@ Z80相当のエミュレータをC言語で作ります。
 # コンパイル方法
 
 Windows上のubuntuでは以下のコマンドを実行する。
+
+1.コンパイル
 ```
-gcc -o z80emu.out z80emu.c
+$ gcc -o z80emu.out z80emu.c
+```
+1.実行
+```
+```
+$ date;./z80emu.out;date
+```
+1.実行結果
+```
+Tue Apr 11 14:15:01 JST 2023
+z80 emulater v0.10
+End of Executed z80.
+AF   BC   DE   HL   IX   IY   SP   PC   AF2  BC2  DE2  HL2
+0044 0000 0000 0000 0000 0000 ffff 0012 0000 0000 0000 0000
+I  R  IFF1 IFF2
+00 00 00   00
+FLAG S,Z,Y,H,X,PV,N,C=01000100
+PC[76 00 3e 00]
+SP[00 11]
+Tue Apr 11 14:15:32 JST 2023
 ```
 
 Raspberrypi pico用実行方法は準備中。
+
+
 
 
 # ベンチマーク
