@@ -25,12 +25,12 @@ Windows上のubuntuでは以下のコマンドを実行する。
 $ gcc -o z80emu.out z80emu.c
 ```
 
-1. 実行
+2. 実行
 ```
 $ date;./z80emu.out;date
 ```
 
-1. 実行結果
+3. 実行結果
 ```
 Tue Apr 11 14:15:01 JST 2023
 z80 emulater v0.10
