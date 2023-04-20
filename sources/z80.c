@@ -1000,7 +1000,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			}
 			H_FLAG=((A_REG ^ temp8)& 0x10)>>4;
 			A_REG = temp8;
-			if(A_REG>0x99){C_FLAG=1;}else{C_FLAG=0;}
+			if(A_REG>0x99){C_FLAG=1;}
 			if(A_REG==0){Z_FLAG=1;}else{Z_FLAG=0;}
 			S_FLAG=(A_REG >>7)&1;
 			PV_FLAG=ParityCheck(A_REG);
