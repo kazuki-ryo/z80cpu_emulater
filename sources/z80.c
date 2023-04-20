@@ -998,12 +998,12 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				if ((H_FLAG==1) | ((A_REG&0xf)>9)) temp8+=6;
 				if ((C_FLAG==1) | (A_REG>0x99)) temp8+=0x60;
 			}
-			if(A_REG>0x99){C_FLAG=1;}
-			if(A_REG==0){Z_FLAG=1;}
 			H_FLAG=((A_REG ^ temp8)& 0x10)>>4;
-			S_FLAG=(A_REG >>7)&1;
 			A_REG = temp8;
-			PV_FLAG=ParityCheck(temp8);
+			if(A_REG>0x99){C_FLAG=1;}else{C_FLAG=0;}
+			if(A_REG==0){Z_FLAG=1;}else{Z_FLAG=0;}
+			S_FLAG=(A_REG >>7)&1;
+			PV_FLAG=ParityCheck(A_REG);
 			DEBUG_CODE("DEBUG DAA\n");
 		break;
 		case 0xC6://ADD A,n
