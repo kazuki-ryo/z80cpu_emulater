@@ -238,6 +238,16 @@ void SetFlagINCDEC(short value,unsigned char byte2,unsigned char dec)
 //	printf("byte=%x byte2=%x\n",byte&16,byte2&8);
 }
 /**
+1の数を数えて偶数なら1、奇数なら0を返す。
+*/
+char ParityCheck(unsigned char byte)
+{
+	unsigned char pp;
+	pp=((byte>>4) & 0xf) ^ (byte & 0xf);
+	pp=((pp>>2) & 0x3) ^ (pp & 0x3);
+	return (((pp>>1) & 0x1) ^ (pp & 0x1))^1;
+}
+/**
 論理演算時のフラグ設定
 byte=演算前の値
 */
@@ -258,10 +268,8 @@ void SetFlagANDORXOR(unsigned char byte)
 	//if(P_Count & 1){PV_FLAG=0;}else{PV_FLAG=1;}
 	PV_FLAG=1-(P_Count & 1);
 	*/
-	unsigned char pp;
-	pp=((byte>>4) & 0xf) ^ (byte & 0xf);
-	pp=((pp>>2) & 0x3) ^ (pp & 0x3);
-	PV_FLAG=(((pp>>1) & 0x1) ^ (pp & 0x1))^1;
+	
+	PV_FLAG=ParityCheck(byte);
 }
 
 /**
@@ -303,6 +311,8 @@ ixiyflag=次の1バイトを+dのパラメータにするか命令ごとの判断材料にする
 char CB_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
 {
 	unsigned char mem1,mem2,mem3;//コードの次のデータ
+	unsigned char temp8;//一時使用
+	unsigned short temp16;//一時使用
 	unsigned short word1,word2,word3;//
 	unsigned short adr1,adr2;//PUSH POP アドレス用
 	unsigned short pushpair;//PUSH POP 一時的値代入
@@ -326,6 +336,22 @@ char CB_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 	#endif
 
 	switch(up2){
+		case 0x00:
+			switch(up5){
+				case 0:
+					temp8=*SSS_PTR[SSS];
+					mem1=(temp8>>7) & 1;
+					temp8=(temp8<<1) | mem1;
+					C_FLAG=mem1;
+					H_FLAG=N_FLAG=0;
+					S_FLAG=(temp8>>7)&1;
+					Z_FLAG=(temp8==0);
+					PV_FLAG=ParityCheck(temp8);
+					*SSS_PTR[SSS]=temp8;
+					DEBUG_CODE("DEBUG RLC r\n");
+				break;
+			}
+		break;
 		case 0x40:
 			if(SSS==6){
 				//BIT b,(HL)
@@ -404,6 +430,8 @@ ixiyflag=次の1バイトを+dのパラメータにするか命令ごとの判断材料にする
 char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
 {
 	unsigned char mem1,mem2,mem3;//コードの次のデータ
+	unsigned char temp8;//一時的利用
+	unsigned short temp16;//一時的利用
 	unsigned short word1,word2,word3;//
 	unsigned short adr1,adr2;//PUSH POP アドレス用
 	unsigned short pushpair;//PUSH POP 一時的値代入
@@ -937,9 +965,9 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			DEBUG_CODE("DEBUG OUT (n),A\n");
 		break;
 		case 0x27://DAA
+/*
 			mem2=(A_REG>>4) & 0x0f;
 			mem1=A_REG & 0x0f;
-
 			if(N_FLAG==1){
 				if(H_FLAG==1){
 					mem1-=6;
@@ -961,15 +989,30 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				}
 			}
 			A_REG=(mem2<<4) | mem1;
+		*/
+			temp8=A_REG;
+			if (N_FLAG){
+				if ((H_FLAG==1) | ((A_REG&0xf)>9)) temp8-=6;
+				if ((C_FLAG==1) | (A_REG>0x99)) temp8-=0x60;
+			}else{
+				if ((H_FLAG==1) | ((A_REG&0xf)>9)) temp8+=6;
+				if ((C_FLAG==1) | (A_REG>0x99)) temp8+=0x60;
+			}
+			if(A_REG>0x99){C_FLAG=1;}
+			if(A_REG==0){Z_FLAG=1;}
+			H_FLAG=((A_REG ^ temp8)& 0x10)>>4;
+			S_FLAG=(A_REG >>7)&1;
+			A_REG = temp8;
+			PV_FLAG=ParityCheck(temp8);
 			DEBUG_CODE("DEBUG DAA\n");
 		break;
 		case 0xC6://ADD A,n
-			mem1=A_REG;
+			temp8=A_REG;
 			PC_REG++;
 			mem2=Memory(PC_REG);
 			calcvalue=(short)A_REG+mem2;
 			A_REG=calcvalue & 0xff;
-			SetFlagADD(calcvalue,mem1);
+			SetFlagADD(calcvalue,temp8);
 			DEBUG_CODE("DEBUG ADD A,n\n");
 		break;
 		default:

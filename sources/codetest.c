@@ -218,6 +218,10 @@ int Test_ROTATE()
 	TestCode(0,"RLC C",0xcb,0x1,0,0);
 	CheckCode(C_REG==0x7 && C_FLAG==1);
 	//
+	D_REG=0xC3;C_FLAG=0;
+	TestCode(0,"RLC D",0xcb,0x2,0,0);
+	CheckCode(D_REG==0x87 && C_FLAG==1 && S_FLAG==1);
+	//
 	A_REG=0x43;C_FLAG=1;
 	TestCode(0,"RLA",0x17,0x0,0,0);
 	CheckCode(A_REG==0x87 && C_FLAG==0);
@@ -670,38 +674,105 @@ int Test_DAA()
 
 	//
 	printf("[TEST16]DAA \n");
+
 	//
-	A_REG=0x0f;
+	A_REG=0x0f;H_FLAG=0;N_FLAG=0;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
 	CheckCode(A_REG==0x15);
 	//
-	A_REG=0x1a;
+	A_REG=0x1a;H_FLAG=0;N_FLAG=0;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
 	CheckCode(A_REG==0x20);
 	//
-	A_REG=0x19;H_FLAG=1;N_FLAG=1;
+	A_REG=0x19;H_FLAG=1;N_FLAG=1;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
 	CheckCode(A_REG==0x13);
 	//
-	A_REG=0x19;H_FLAG=1;N_FLAG=0;
+	A_REG=0x19;H_FLAG=1;N_FLAG=0;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
-	CheckCode(A_REG==0x19);
+	CheckCode(A_REG==0x1F);
 	//
-	A_REG=0xA9;H_FLAG=1;N_FLAG=0;
+	A_REG=0xA9;H_FLAG=1;N_FLAG=0;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
-	CheckCode(A_REG==0x09 && C_FLAG==1);
+	CheckCode(A_REG==0x0F && C_FLAG==1);
+	
 	//
-	A_REG=0xff;H_FLAG=0;N_FLAG=0;
+	A_REG=0xff;H_FLAG=0;N_FLAG=0;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
 	CheckCode(A_REG==0x65 && C_FLAG==1);
 	//
-	A_REG=0xff;H_FLAG=1;N_FLAG=1;
+	A_REG=0xff;H_FLAG=1;N_FLAG=1;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
 	CheckCode(A_REG==0x99 && C_FLAG==1);
 	//
-	A_REG=0xf9;H_FLAG=1;N_FLAG=1;
+	A_REG=0xf9;H_FLAG=1;N_FLAG=1;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
 	CheckCode(A_REG==0x93 && C_FLAG==1);
+	//
+	A_REG=0x00;H_FLAG=1;N_FLAG=0;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x06);
+	//
+	A_REG=0x00;H_FLAG=1;N_FLAG=0;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x66);
+	//
+	A_REG=0x00;H_FLAG=0;N_FLAG=0;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x60);
+	//
+	A_REG=0x0A;H_FLAG=0;N_FLAG=0;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x10);
+	//
+	A_REG=0x00;H_FLAG=1;N_FLAG=1;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0xFA);
+	//
+	A_REG=0x00;H_FLAG=1;N_FLAG=1;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x9A);
+	//
+	A_REG=0x00;H_FLAG=0;N_FLAG=1;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0xA0);
+	//
+	A_REG=0xA0;H_FLAG=0;N_FLAG=0;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x00 && C_FLAG==1 && Z_FLAG==1);
+	
+	//
+	A_REG=0xFF;H_FLAG=0;N_FLAG=0;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x65 && C_FLAG==1 && H_FLAG==1);
+	//
+	A_REG=0xFF;H_FLAG=0;N_FLAG=0;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x65 && C_FLAG==1 && H_FLAG==1);
+	//
+	A_REG=0xFF;H_FLAG=0;N_FLAG=1;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x99 && C_FLAG==1 && S_FLAG==1);
+	//
+	A_REG=0xFF;H_FLAG=0;N_FLAG=1;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x99 && C_FLAG==1 && S_FLAG==1);
+	//
+	A_REG=0xFF;H_FLAG=0;N_FLAG=1;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x99 && C_FLAG==1 && S_FLAG==1);
+	//
+	A_REG=0xFF;H_FLAG=1;N_FLAG=1;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x99 && C_FLAG==1 && S_FLAG==1);
+	//
+	A_REG=0x0F;H_FLAG=1;N_FLAG=1;C_FLAG=0;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x09 && C_FLAG==0 && S_FLAG==0);
+	//
+	A_REG=0x0F0;H_FLAG=0;N_FLAG=1;C_FLAG=1;
+	TestCode(0,"DAA",0x27,0x0,0,0);
+	CheckCode(A_REG==0x090 && C_FLAG==1 && S_FLAG==1);
 
 	return ErrorUnit;
 }
@@ -734,28 +805,44 @@ int main(int argc,char* argv[])
 	InitZ80(_WorkMemory,_IOMemory);
 	
 	int results[20]={0};
-/*
+	/*
 	results[0]=Test_LD();
 	results[1]=Test_PUSHPOP();
 	results[2]=Test_EX();
+	
 	results[3]=Test_ROTATE();
+
 	results[4]=Test_SHIFT();
-	*/
 	results[5]=Test_CALC();
 	results[6]=Test_LOGICAL();
-	/*
 	results[7]=Test_BIT();
 	results[8]=Test_CP();
 	results[9]=Test_JUMP();
 	results[10]=Test_CALL();
 	results[11]=Test_OUTIN();
-	results[12]=Test_CPU();
-	results[13]=Test_BLOCK();
 */
+	results[12]=Test_DAA();
+/*
+	results[13]=Test_CPU();
+	results[14]=Test_BLOCK();
+*/
+
+	printf("TEST LD Error=%d\n",results[0]);
+	printf("TEST PUSHPOP Error=%d\n",results[1]);
+	printf("TEST EX Error=%d\n",results[2]);
 	printf("TEST ROTATE Error=%d\n",results[3]);
 	printf("TEST SHIFT Error=%d\n",results[4]);
 	printf("TEST CALC Error=%d\n",results[5]);
 	printf("TEST LOGICAL Error=%d\n",results[6]);
+	printf("TEST BIT Error=%d\n",results[7]);
+	printf("TEST CP Error=%d\n",results[8]);
+	printf("TEST JUMP Error=%d\n",results[9]);
+	printf("TEST CALL Error=%d\n",results[10]);
+	printf("TEST OUTIN Error=%d\n",results[11]);
+
+	printf("TEST DAA Error=%d\n",results[12]);
+	printf("TEST CPU Error=%d\n",results[13]);
+	printf("TEST BLOCK Error=%d\n",results[14]);
 
 	
 	//
