@@ -991,7 +991,6 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			A_REG=(mem2<<4) | mem1;
 		*/
 			temp8=A_REG;
-		printf("A=%x F=%x\n",A_REG,F_REG);
 			if (N_FLAG){
 				if ((H_FLAG==1) | ((A_REG&0xf)>9)) temp8-=6;
 				if ((C_FLAG==1) | (A_REG>0x99)) temp8-=0x60;
