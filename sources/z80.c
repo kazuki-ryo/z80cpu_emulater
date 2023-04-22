@@ -991,6 +991,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			A_REG=(mem2<<4) | mem1;
 		*/
 			temp8=A_REG;
+		printf("A=%x F=%x\n",A_REG,F_REG);
 			if (N_FLAG){
 				if ((H_FLAG==1) | ((A_REG&0xf)>9)) temp8-=6;
 				if ((C_FLAG==1) | (A_REG>0x99)) temp8-=0x60;
@@ -999,10 +1000,10 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				if ((C_FLAG==1) | (A_REG>0x99)) temp8+=0x60;
 			}
 			H_FLAG=((A_REG ^ temp8)& 0x10)>>4;
-			A_REG = temp8;
 			if(A_REG>0x99){C_FLAG=1;}
-			if(A_REG==0){Z_FLAG=1;}else{Z_FLAG=0;}
-			S_FLAG=(A_REG >>7)&1;
+			if(temp8==0){Z_FLAG=1;}else{Z_FLAG=0;}
+			S_FLAG=(temp8 >>7)&1;
+			A_REG = temp8;
 			PV_FLAG=ParityCheck(A_REG);
 			DEBUG_CODE("DEBUG DAA\n");
 		break;

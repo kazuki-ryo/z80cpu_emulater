@@ -703,7 +703,8 @@ int Test_DAA()
 	//
 	A_REG=0xff;H_FLAG=1;N_FLAG=1;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
-	CheckCode(A_REG==0x99 && C_FLAG==1);
+	CheckCode(A_REG==0x99 && C_FLAG==1 && S_FLAG==1 && N_FLAG==1 && PV_FLAG==1);
+	
 	//
 	A_REG=0xf9;H_FLAG=1;N_FLAG=1;C_FLAG=0;
 	TestCode(0,"DAA",0x27,0x0,0,0);
