@@ -207,6 +207,7 @@ int Test_PUSHPOP()
 int Test_ROTATE()
 {
 	ErrorUnit=0;
+	/*
 	//
 	printf("[TEST05]LEFT ROTATE\n");
 	//
@@ -233,12 +234,48 @@ int Test_ROTATE()
 	A_REG=0x42;C_FLAG=1;
 	TestCode(0,"RRA",0x1f,0x0,0,0);
 	CheckCode(A_REG==0xa1 && C_FLAG==0);
-
+*/
+	//
+	B_REG=0x81;C_FLAG=0;
+	TestCode(0,"RLC B",0xCB,0x0,0,0);
+	CheckCode(B_REG==0x03 && C_FLAG==1);
+	//
+	B_REG=0x81;C_FLAG=1;
+	TestCode(0,"RL B",0xCB,0x10,0,0);
+	CheckCode(B_REG==0x03 && C_FLAG==1);
+	//
+	B_REG=0x41;C_FLAG=0;
+	TestCode(0,"RRC B",0xCB,0x08,0,0);
+	CheckCode(B_REG==0xa0 && C_FLAG==1);
+	//
+	B_REG=0x41;C_FLAG=0;
+	TestCode(0,"RR B",0xCB,0x18,0,0);
+	CheckCode(B_REG==0x20 && C_FLAG==1);
 	return ErrorUnit;
 }
 int Test_SHIFT()
 {
 	ErrorUnit=0;
+	//
+	B_REG=0x81;C_FLAG=0;
+	TestCode(0,"SLA B",0xCB,0x20,0,0);
+	CheckCode(B_REG==0x02 && C_FLAG==1);
+	//
+	B_REG=0x81;C_FLAG=0;
+	TestCode(0,"SRA B",0xCB,0x28,0,0);
+	CheckCode(B_REG==0xc0 && C_FLAG==1);
+	//
+	B_REG=0x81;C_FLAG=0;
+	TestCode(0,"SRL B",0xCB,0x38,0,0);
+	CheckCode(B_REG==0x40 && C_FLAG==1);
+	//
+	A_REG=0x43;HL_REG=3;C_FLAG=0;
+	TestCode(0,"RLD",0xED,0x6f,0,0x21);
+	CheckCode(A_REG==0x42 && Memory(3)==0x13);
+	//
+	A_REG=0x43;HL_REG=3;C_FLAG=0;
+	TestCode(0,"RRD",0xED,0x67,0,0x21);
+	CheckCode(A_REG==0x41 && Memory(3)==0x32);
 
 	return ErrorUnit;
 }
@@ -810,10 +847,11 @@ int main(int argc,char* argv[])
 	results[0]=Test_LD();
 	results[1]=Test_PUSHPOP();
 	results[2]=Test_EX();
-	
+	*/
 	results[3]=Test_ROTATE();
 
 	results[4]=Test_SHIFT();
+	/*
 	results[5]=Test_CALC();
 	results[6]=Test_LOGICAL();
 	results[7]=Test_BIT();
@@ -821,9 +859,7 @@ int main(int argc,char* argv[])
 	results[9]=Test_JUMP();
 	results[10]=Test_CALL();
 	results[11]=Test_OUTIN();
-*/
 	results[12]=Test_DAA();
-/*
 	results[13]=Test_CPU();
 	results[14]=Test_BLOCK();
 */

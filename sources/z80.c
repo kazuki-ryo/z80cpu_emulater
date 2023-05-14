@@ -277,7 +277,7 @@ ED code
 */
 char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
 {
-	unsigned char mem1,mem2,mem3;//コードの次のデータ
+	unsigned char mem1,mem2,mem3,mem4;//コードの次のデータ
 	unsigned short word1,word2,word3;//
 	unsigned short adr1,adr2;//PUSH POP アドレス用
 	unsigned short pushpair;//PUSH POP 一時的値代入
@@ -298,7 +298,34 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 	printf("down3=%x down4=%x \n",down3,down4);
 	#endif
 	Cycle=0;
-	
+	switch(code){
+		case 0x6f://RLD
+			mem1=A_REG & 0xf0;
+			mem2=A_REG & 0x0f;
+			mem3=Memory(HL_REG) & 0xf0;
+			mem4=Memory(HL_REG) & 0x0f;
+			A_REG=mem1 | (mem3>>4);
+			Memory(HL_REG)=mem2 | (mem4<<4);
+				H_FLAG=N_FLAG=0;
+				S_FLAG=(A_REG>>7)&1;
+				Z_FLAG=(A_REG==0);
+				PV_FLAG=ParityCheck(A_REG);
+			DEBUG_CODE("DEBUG RLD\n");
+		break;
+		case 0x67://RRD
+			mem1=A_REG & 0xf0;
+			mem2=A_REG & 0x0f;
+			mem3=Memory(HL_REG) & 0xf0;
+			mem4=Memory(HL_REG) & 0x0f;
+			A_REG=mem1 | mem4;
+			Memory(HL_REG)=(mem2<<4) | (mem3>>4);
+				H_FLAG=N_FLAG=0;
+				S_FLAG=(A_REG>>7)&1;
+				Z_FLAG=(A_REG==0);
+				PV_FLAG=ParityCheck(A_REG);
+			DEBUG_CODE("DEBUG RLD\n");
+		break;
+	}
 	return 0;
 }
 
@@ -336,20 +363,214 @@ char CB_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 	#endif
 
 	switch(up2){
-		case 0x00:
+		case 0x00://RLC r
 			switch(up5){
 				case 0:
+					if(SSS==6){
+						if(ixiyflag==1){
+							PC_REG++;mem2=Memory(PC_REG);
+							hl_reg=hl_reg+mem2;
+						}
+						temp8=Memory(hl_reg);
+						mem1=(temp8>>7) & 1;
+						temp8=(temp8<<1) | mem1;
+							C_FLAG=mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						Memory(hl_reg)=temp8;
+					}else{
+						temp8=*SSS_PTR[SSS];
+						mem1=(temp8>>7) & 1;
+						temp8=(temp8<<1) | mem1;
+							C_FLAG=mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						*SSS_PTR[SSS]=temp8;
+					}
+					DEBUG_CODE("DEBUG RLC r\n");
+				break;
+				case 0x08://RRC r
+					if(SSS==6){
+						if(ixiyflag==1){
+							PC_REG++;mem2=Memory(PC_REG);
+							hl_reg=hl_reg+mem2;
+						}
+						temp8=Memory(hl_reg);
+						mem1=temp8 & 1;
+						temp8=(temp8>>1) | (mem1<<7);
+							C_FLAG=mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						Memory(hl_reg)=temp8;
+					}else{
+						temp8=*SSS_PTR[SSS];
+						mem1=temp8 & 1;
+						temp8=(temp8>>1) | (mem1<<7);
+						C_FLAG=mem1;
+						H_FLAG=N_FLAG=0;
+						S_FLAG=(temp8>>7)&1;
+						Z_FLAG=(temp8==0);
+						PV_FLAG=ParityCheck(temp8);
+						*SSS_PTR[SSS]=temp8;
+					}
+					DEBUG_CODE("DEBUG RRC r\n");
+
+				break;
+				case 0x10://RL r
+					if(SSS==6){
+						if(ixiyflag==1){
+							PC_REG++;mem2=Memory(PC_REG);
+							hl_reg=hl_reg+mem2;
+						}
+						temp8=Memory(hl_reg);
+						mem1=(temp8>>7) & 1;
+						temp8=(temp8<<1) | C_FLAG;
+							C_FLAG=mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						Memory(hl_reg)=temp8;
+					}else{
+						temp8=*SSS_PTR[SSS];
+						mem1=(temp8>>7) & 1;
+						temp8=(temp8<<1) | C_FLAG;
+						C_FLAG=mem1;
+						H_FLAG=N_FLAG=0;
+						S_FLAG=(temp8>>7)&1;
+						Z_FLAG=(temp8==0);
+						PV_FLAG=ParityCheck(temp8);
+						*SSS_PTR[SSS]=temp8;
+					}
+					DEBUG_CODE("DEBUG RL r\n");
+				break;
+
+				case 0x18://RR r
+					if(SSS==6){
+						if(ixiyflag==1){
+							PC_REG++;mem2=Memory(PC_REG);
+							hl_reg=hl_reg+mem2;
+						}
+						temp8=Memory(hl_reg);
+						mem1=temp8 & 1;
+						temp8=(temp8>>1) | (C_FLAG<<7);
+							C_FLAG=mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						Memory(hl_reg)=temp8;
+					}else{
+						temp8=*SSS_PTR[SSS];
+						mem1=temp8 & 1;
+						temp8=(temp8>>1) | (C_FLAG<<7);
+						C_FLAG=mem1;
+						H_FLAG=N_FLAG=0;
+						S_FLAG=(temp8>>7)&1;
+						Z_FLAG=(temp8==0);
+						PV_FLAG=ParityCheck(temp8);
+						*SSS_PTR[SSS]=temp8;
+					}
+					DEBUG_CODE("DEBUG RR r\n");
+				break;
+				case 0x20://SLA r
+					if(SSS==6){
+						if(ixiyflag==1){
+							PC_REG++;mem2=Memory(PC_REG);
+							hl_reg=hl_reg+mem2;
+						}
+						temp8=Memory(hl_reg);
+							mem1=temp8 & 1;
+							C_FLAG=(temp8>>7) & 1;
+							temp8=(temp8<<1);
+		//					C_FLAG=mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						Memory(hl_reg)=temp8;
+					}else{
+
 					temp8=*SSS_PTR[SSS];
-					mem1=(temp8>>7) & 1;
-					temp8=(temp8<<1) | mem1;
-					C_FLAG=mem1;
+					mem1=temp8 & 1;
+					C_FLAG=(temp8>>7) & 1;
+					temp8=(temp8<<1);
 					H_FLAG=N_FLAG=0;
 					S_FLAG=(temp8>>7)&1;
 					Z_FLAG=(temp8==0);
 					PV_FLAG=ParityCheck(temp8);
 					*SSS_PTR[SSS]=temp8;
-					DEBUG_CODE("DEBUG RLC r\n");
+					}
+						DEBUG_CODE("DEBUG SLA r\n");
 				break;
+				case 0x28://SRA r
+					if(SSS==6){
+						if(ixiyflag==1){
+							PC_REG++;mem2=Memory(PC_REG);
+							hl_reg=hl_reg+mem2;
+						}
+						temp8=Memory(hl_reg);
+						mem1=temp8 & 128;
+						C_FLAG=temp8 & 1;
+						temp8=(temp8>>1) | mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						Memory(hl_reg)=temp8;
+					}else{
+						temp8=*SSS_PTR[SSS];
+						mem1=temp8 & 128;
+						C_FLAG=temp8 & 1;
+						temp8=(temp8>>1) | mem1;
+						H_FLAG=N_FLAG=0;
+						S_FLAG=(temp8>>7)&1;
+						Z_FLAG=(temp8==0);
+						PV_FLAG=ParityCheck(temp8);
+						*SSS_PTR[SSS]=temp8;
+					}
+						DEBUG_CODE("DEBUG SRA r\n");
+				break;
+				case 0x38://SRL r
+					if(SSS==6){
+						if(ixiyflag==1){
+							PC_REG++;mem2=Memory(PC_REG);
+							hl_reg=hl_reg+mem2;
+						}
+						temp8=Memory(hl_reg);
+						C_FLAG=temp8 & 1;
+						temp8=(temp8>>1);
+
+		//					C_FLAG=mem1;
+							H_FLAG=N_FLAG=0;
+							S_FLAG=(temp8>>7)&1;
+							Z_FLAG=(temp8==0);
+							PV_FLAG=ParityCheck(temp8);
+						Memory(hl_reg)=temp8;
+					}else{
+
+						temp8=*SSS_PTR[SSS];
+						C_FLAG=temp8 & 1;
+						temp8=(temp8>>1);
+						H_FLAG=N_FLAG=0;
+						S_FLAG=(temp8>>7)&1;
+						Z_FLAG=(temp8==0);
+						PV_FLAG=ParityCheck(temp8);
+						*SSS_PTR[SSS]=temp8;
+					}
+					DEBUG_CODE("DEBUG SRL r\n");
+				break;
+
+
+				
+				
+				
 			}
 		break;
 		case 0x40:
@@ -483,6 +704,13 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			return Result;
 		break;
 		case 0xed://
+			//コード読み込み
+			PC_REG++;NextCode=Memory(PC_REG);
+			#if DEBUG_VIEW
+				printf("ED code=%0x\n",NextCode);
+			#endif
+			Result=ED_CodeAnalysis(NextCode,ixiyflag,hl_reg,h_reg,l_reg);
+			return Result;
 		break;
 		case 0xcb://
 			//コード読み込み
