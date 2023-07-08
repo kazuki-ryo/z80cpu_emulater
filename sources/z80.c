@@ -213,6 +213,29 @@ void SetFlagSUB(short value,unsigned char byte2)
 //	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
 	if((byte2&8)==0 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
 }
+/**
+ブロック比較実行時のフラグ設定
+value=演算後の値(16bit)
+bytes=演算前の値
+*/
+void SetFlagCP(short value,unsigned char byte2)
+{
+	unsigned char byte;
+	unsigned char P_Count=0,i;
+	byte=(unsigned char)value & 0xff;
+	N_FLAG=1;//加算0,減算1
+	if(byte==0){Z_FLAG=1;}else{Z_FLAG=0;}
+	S_FLAG=(byte >>7);
+
+	PV_FLAG=0;
+	printf("value=%d byte2=%d\n",value,byte2);
+	if(value>127 && byte2<128){PV_FLAG=1;}
+	if(value<-128 && byte2>127){PV_FLAG=1;}
+	if(value<128 && byte2>127){PV_FLAG=1;}
+	//bit3からbit4に桁上がりがある場合
+//	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+	if((byte2&8)==0 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+}
 
 /**
 加算実行時のフラグ設定
@@ -282,21 +305,21 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 	unsigned short adr1,adr2;//PUSH POP アドレス用
 	unsigned short pushpair;//PUSH POP 一時的値代入
 	unsigned char up2=code & 0xc0;//上位2ビット
-	unsigned char up5=code & 0xf8;//上位5ビット
+//	unsigned char up5=code & 0xf8;//上位5ビット
 	unsigned char down3=code & 0x07;//下位3ビット
-	unsigned char down4=code & 0x0f;//下位4ビット
+//	unsigned char down4=code & 0x0f;//下位4ビット
 	unsigned char DDD=(code>>3) & 0x7;//中3ビット
-	unsigned char CCC=(code>>3) & 0x7;//中3ビット
-	unsigned char SSS=code & 0x7;//下3ビット
-	unsigned char RP=(code>>4)&3;//中2ビット
+//	unsigned char CCC=(code>>3) & 0x7;//中3ビット
+//	unsigned char SSS=code & 0x7;//下3ビット
+//	unsigned char RP=(code>>4)&3;//中2ビット
 	short calcvalue;//加算減算結果
 	int calcvalue32;//加算減算結果
 	//
-	#if DEBUG_VIEW
-	printf("DDD=%x SSS=%x RP=%x\n",DDD,SSS,RP);
-	printf("up2=%x up5=%x \n",up2,up5);
-	printf("down3=%x down4=%x \n",down3,down4);
-	#endif
+//	#if DEBUG_VIEW
+//	printf("DDD=%x SSS=%x RP=%x\n",DDD,SSS,RP);
+//	printf("up2=%x up5=%x \n",up2,up5);
+//	printf("down3=%x down4=%x \n",down3,down4);
+//	#endif
 	Cycle=0;
 	switch(code){
 		case 0x6f://RLD
@@ -324,6 +347,191 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 				Z_FLAG=(A_REG==0);
 				PV_FLAG=ParityCheck(A_REG);
 			DEBUG_CODE("DEBUG RLD\n");
+		break;
+		case 0xa3://OUTI
+			mem1=Memory(HL_REG);
+			printf("HL=%x (%d)=%x\n",HL_REG,HL_REG,mem1);
+			IOMemory[C_REG]=mem1;
+			B_REG--;
+			HL_REG++;
+			N_FLAG=1;Z_FLAG=(B_REG==0);
+			DEBUG_CODE("DEBUG OUTI\n");
+		break;
+		case 0xb3://OUTIR
+			do{
+				mem1=Memory(HL_REG);
+				IOMemory[C_REG]=mem1;
+				B_REG--;
+				HL_REG++;
+			}while(B_REG!=0);
+			N_FLAG=1;Z_FLAG=1;
+			DEBUG_CODE("DEBUG OUTIR\n");
+		break;
+		case 0xab://OUTD
+			mem1=Memory(HL_REG);
+			printf("(HL)=%x\n",mem1);
+			IOMemory[C_REG]=mem1;
+			B_REG--;
+			HL_REG--;
+			N_FLAG=1;Z_FLAG=(B_REG==0);
+			DEBUG_CODE("DEBUG OUTD\n");
+		break;
+		case 0xbb://OUTDR
+			do{
+				mem1=Memory(HL_REG);
+				IOMemory[C_REG]=mem1;
+				B_REG--;
+				HL_REG--;
+			}while(B_REG!=0);
+			N_FLAG=1;Z_FLAG=1;
+			DEBUG_CODE("DEBUG OUTDR\n");
+		break;
+		case 0xa2://INI
+			mem1=IOMemory[C_REG];
+			Memory(HL_REG)=mem1;
+			B_REG--;
+			HL_REG++;
+			N_FLAG=1;Z_FLAG=(B_REG==0);
+			DEBUG_CODE("DEBUG INI\n");
+		break;
+		case 0xb2://INIR
+			do{
+				mem1=IOMemory[C_REG];
+				Memory(HL_REG)=mem1;
+				B_REG--;
+				HL_REG++;
+			}while(B_REG!=0);
+			N_FLAG=1;Z_FLAG=(B_REG==0);
+			DEBUG_CODE("DEBUG INIR\n");
+		break;
+		case 0xaa://IND
+			mem1=IOMemory[C_REG];
+			Memory(HL_REG)=mem1;
+			B_REG--;
+			HL_REG--;
+			N_FLAG=1;Z_FLAG=(B_REG==0);
+			DEBUG_CODE("DEBUG IND\n");
+		break;
+		case 0xba://INDR
+			do{
+				mem1=IOMemory[C_REG];
+				Memory(HL_REG)=mem1;
+				B_REG--;
+				HL_REG--;
+			}while(B_REG!=0);
+			N_FLAG=1;Z_FLAG=(B_REG==0);
+			DEBUG_CODE("DEBUG INDR\n");
+		break;
+		case 0xa1://CPI
+			mem1=Memory(HL_REG);
+			word1=A_REG- mem1;
+			BC_REG--;
+			HL_REG++;
+			SetFlagCP(word1,A_REG);
+			PV_FLAG=(BC_REG!=0);
+			DEBUG_CODE("DEBUG CPI\n");
+		break;
+		case 0xb1://CPIR
+			do{
+				mem1=Memory(HL_REG);
+				word1=A_REG- mem1;
+				BC_REG--;
+				HL_REG++;
+			}while(BC_REG!=0 && A_REG!=mem1);
+			SetFlagCP(word1,A_REG);
+			PV_FLAG=(BC_REG!=0);
+			DEBUG_CODE("DEBUG CPIR\n");
+		break;
+		case 0xa9://CPD
+			mem1=Memory(HL_REG);
+			word1=A_REG- mem1;
+			BC_REG--;
+			HL_REG--;
+			SetFlagCP(word1,A_REG);
+			PV_FLAG=(BC_REG!=0);
+			DEBUG_CODE("DEBUG CPD\n");
+		break;
+		case 0xb9://CPDR
+			do{
+				mem1=Memory(HL_REG);
+				word1=A_REG- mem1;
+				BC_REG--;
+				HL_REG--;
+			}while(BC_REG!=0 && A_REG!=mem1);
+			SetFlagCP(word1,A_REG);
+			PV_FLAG=(BC_REG!=0);
+			DEBUG_CODE("DEBUG CPDR\n");
+		break;
+		case 0x46://IM 0
+			//何もしない
+			DEBUG_CODE("DEBUG IM 0\n");
+		break;
+		case 0x56://IM 1
+			//何もしない
+			DEBUG_CODE("DEBUG IM 1\n");
+		break;
+		case 0x5e://IM 2
+			//何もしない
+			DEBUG_CODE("DEBUG IM 2\n");
+		break;
+		case 0x4d://RETI
+		//特別な割り込み処理はしない
+			mem1=Memory((SP_REG)& 0xffff);
+			mem2=Memory((SP_REG+1)& 0xffff);
+			SP_REG=SP_REG+2;
+			PC_REG=(mem1 | (mem2<<8))-1;
+			IFF1_REG=IFF2_REG;
+			DEBUG_CODE("DEBUG RETI\n");
+		break;
+		case 0x45://RETD
+		//特別な割り込み処理はしない
+			mem1=Memory((SP_REG)& 0xffff);
+			mem2=Memory((SP_REG+1)& 0xffff);
+			SP_REG=SP_REG+2;
+			PC_REG=(mem1 | (mem2<<8))-1;
+			IFF1_REG=IFF2_REG;
+			DEBUG_CODE("DEBUG RETI\n");
+		break;
+		case 0x57://LD A,I
+			A_REG=I_REG;
+			H_FLAG=N_FLAG=C_FLAG=0;PV_FLAG=IFF2_REG;
+			Z_FLAG=(I_REG==0);
+			S_FLAG=(I_REG>127);
+			DEBUG_CODE("DEBUG LD A.I\n");
+		break;
+		case 0x47://LD I,A
+			I_REG=A_REG;
+			DEBUG_CODE("DEBUG LD I,A\n");
+		break;
+		case 0x5f://LD A,R
+			A_REG=R_REG;
+			Z_FLAG=(R_REG==0);
+			S_FLAG=(R_REG>127);
+			H_FLAG=N_FLAG=C_FLAG=0;PV_FLAG=IFF2_REG;
+			DEBUG_CODE("DEBUG LD A.R\n");
+		break;
+		case 0x4f://LD R,A
+			R_REG=A_REG;
+			DEBUG_CODE("DEBUG LD R,A\n");
+		break;
+	}
+	switch(up2){
+		case 0x40:
+			switch(down3){
+				case 1://OUT (C),r
+					IOMemory[C_REG]=*SSS_PTR[DDD];
+					DEBUG_CODE("DEBUG OUT (C),r\n");
+				break;
+				case 0://IN r,(C)
+					mem1=IOMemory[C_REG];
+					*SSS_PTR[DDD]=mem1;
+					H_FLAG=N_FLAG=0;
+					DEBUG_CODE("DEBUG IN (C),r\n");
+					S_FLAG=(mem1>>7)&1;
+					Z_FLAG=(mem1==0);
+					PV_FLAG=ParityCheck(mem1);
+				break;
+			}
 		break;
 	}
 	return 0;
