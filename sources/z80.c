@@ -7,8 +7,6 @@ Z80命令を翻訳して実行する。
 ・DOSファンクション（文字入力、出力）
 ・文字表示I/O（VDP)
 ・文字表示BIOS(A2H)
-
-オリジナルエミュレータをraspberrypi picoで実行し速度を比較する。
 */
 int dummy=0;
 #if DEBUG_VIEW
@@ -27,8 +25,12 @@ unsigned char* IOMemory;//I/O AREA
 
 #define CHAR8TO16(data) data>127?(-(256-data))&0xffff:data
 
-
-
+int IOAccessFlag=0;//IOにアクセスするときのフラグ（非同期）、OUT=1、IN=2
+int IOAccessPort=0;//IOアクセスポート番号
+unsigned char IOAccessData=0;//書き込み時の非同期データ
+void (* IOTaskCallback)();//IO処理でコールバックする関数ポインタ
+#define IO_OUT 1
+#define IO_IN 2
 //
 REGISTER regs; //全レジスタ
 
@@ -140,6 +142,8 @@ void InitZ80(unsigned char* mem,unsigned char* iomem)
 	for(a=0;a<sizeof(IOMemory);a++){
 		IOMemory[a]=0;
 	}
+	//
+	IOTaskCallback=NULL;
 }
 /**
 加算実行時のフラグ設定
@@ -205,7 +209,7 @@ void SetFlagSUB(short value,unsigned char byte2)
 	S_FLAG=(byte >>7);
 
 	PV_FLAG=0;
-	printf("value=%d byte2=%d\n",value,byte2);
+	//printf("value=%d byte2=%d\n",value,byte2);
 	if(value>127 && byte2<128){PV_FLAG=1;}
 	if(value<-128 && byte2>127){PV_FLAG=1;}
 	if(value<128 && byte2>127){PV_FLAG=1;}
@@ -228,7 +232,7 @@ void SetFlagCP(short value,unsigned char byte2)
 	S_FLAG=(byte >>7);
 
 	PV_FLAG=0;
-	printf("value=%d byte2=%d\n",value,byte2);
+	//printf("value=%d byte2=%d\n",value,byte2);
 	if(value>127 && byte2<128){PV_FLAG=1;}
 	if(value<-128 && byte2>127){PV_FLAG=1;}
 	if(value<128 && byte2>127){PV_FLAG=1;}
@@ -301,7 +305,9 @@ ED code
 char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
 {
 	unsigned char mem1,mem2,mem3,mem4;//コードの次のデータ
-	unsigned short word1,word2,word3;//
+	unsigned char byte1,byte2;
+	unsigned short word1,word2,word3;//16bit
+	unsigned int dword;//32bit
 	unsigned short adr1,adr2;//PUSH POP アドレス用
 	unsigned short pushpair;//PUSH POP 一時的値代入
 	unsigned char up2=code & 0xc0;//上位2ビット
@@ -322,6 +328,171 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 //	#endif
 	Cycle=0;
 	switch(code){
+		case 0xc5://DIV A,B 拡張命令
+			if(B_REG>0){
+				L_REG=A_REG/B_REG;
+				H_REG=A_REG-(L_REG*B_REG);
+				Z_FLAG=(L_REG==0);
+				C_FLAG=0;
+			}else{
+				C_FLAG=1;//除算エラー
+			}
+			DEBUG_CODE("DEBUG DIV A,B\n");
+		break;
+		case 0xc7://DIV HL,BC 拡張命令
+			if(BC_REG>0){
+				word1=HL_REG/BC_REG;
+				DE_REG=HL_REG-(word1*BC_REG);
+				HL_REG=word1;
+				Z_FLAG=(HL_REG==0);
+				C_FLAG=0;
+			}else{
+				C_FLAG=1;//除算エラー
+			}
+			DEBUG_CODE("DEBUG DIV HL,BC\n");
+		break;
+		case 0xc1://MLT A,B
+			HL_REG=A_REG*B_REG;
+			Z_FLAG=(HL_REG==0);
+			C_FLAG=(H_REG>0);
+			DEBUG_CODE("DEBUG MLT A,B\n");
+		break;
+		case 0xc9://MLT A,C
+			HL_REG=A_REG*C_REG;
+			Z_FLAG=(HL_REG==0);
+			C_FLAG=(H_REG>0);
+			DEBUG_CODE("DEBUG MLT A,C\n");
+		break;
+		case 0xD1://MLT A,D
+			HL_REG=A_REG*D_REG;
+			Z_FLAG=(HL_REG==0);
+			C_FLAG=(H_REG>0);
+			DEBUG_CODE("DEBUG MLT A,D\n");
+		break;
+		case 0xD9://MLT A,E
+			HL_REG=A_REG*E_REG;
+			Z_FLAG=(HL_REG==0);
+			C_FLAG=(H_REG>0);
+			DEBUG_CODE("DEBUG MLT A,E\n");
+		break;
+		case 0xE1://MLT A,H 動作保証外命令
+			HL_REG=A_REG*H_REG;
+			Z_FLAG=(HL_REG==0);
+			C_FLAG=(H_REG>0);
+			DEBUG_CODE("DEBUG MLT A,H\n");
+		break;
+		case 0xE9://MLT A,L 動作保証外命令
+			HL_REG=A_REG*L_REG;
+			Z_FLAG=(HL_REG==0);
+			C_FLAG=(H_REG>0);
+			DEBUG_CODE("DEBUG MLT A,L\n");
+		break;
+		case 0xF9://MLT A,A 動作保証外命令
+			HL_REG=A_REG*A_REG;
+			Z_FLAG=(HL_REG==0);
+			C_FLAG=(H_REG>0);
+			DEBUG_CODE("DEBUG MLT A,A\n");
+		break;
+		case 0xC3://MLT HL,BC
+			calcvalue32=HL_REG*BC_REG;
+			DE_REG=(calcvalue32>>16)&0xffff;
+			HL_REG=(calcvalue32)&0xffff;
+			Z_FLAG=(calcvalue32==0);
+			C_FLAG=(DE_REG>0);
+			DEBUG_CODE("DEBUG MLT HL,BC\n");
+		break;
+		case 0xD3://MLT HL,DE 動作保証外命令
+			calcvalue32=HL_REG*DE_REG;
+			DE_REG=(calcvalue32>>16)&0xffff;
+			HL_REG=(calcvalue32)&0xffff;
+			Z_FLAG=(calcvalue32==0);
+			C_FLAG=(DE_REG>0);
+			DEBUG_CODE("DEBUG MLT HL,BC\n");
+		break;
+		case 0xE3://MLT HL,HL 動作保証外命令
+			calcvalue32=HL_REG*HL_REG;
+			DE_REG=(calcvalue32>>16)&0xffff;
+			HL_REG=(calcvalue32)&0xffff;
+			Z_FLAG=(calcvalue32==0);
+			C_FLAG=(DE_REG>0);
+			DEBUG_CODE("DEBUG MLT HL,BC\n");
+		break;
+		case 0xf3://MLT HL,SP
+			calcvalue32=HL_REG*SP_REG;
+			DE_REG=(calcvalue32>>16)&0xffff;
+			HL_REG=(calcvalue32)&0xffff;
+			Z_FLAG=(calcvalue32==0);
+			C_FLAG=(DE_REG>0);
+			DEBUG_CODE("DEBUG MLT HL,SP\n");
+		break;
+		case 0x4b://LD (n'n),BC
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			byte1=Memory(pushpair);pushpair++;
+			byte2=Memory(pushpair);
+			BC_REG=byte1 | (byte2<<8);
+			DEBUG_CODE("DEBUG LD BC,(n'n)\n");
+		break;
+		case 0x5b://LD (n'n),DE
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			byte1=Memory(pushpair);pushpair++;
+			byte2=Memory(pushpair);
+			DE_REG=byte1 | (byte2<<8);
+			DEBUG_CODE("DEBUG LD DE,(n'n)\n");
+		break;
+		case 0x6b://LD (n'n),HL
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			byte1=Memory(pushpair);pushpair++;
+			byte2=Memory(pushpair);
+			HL_REG=byte1 | (byte2<<8);
+			DEBUG_CODE("DEBUG LD HL,(n'n)\n");
+		break;
+		case 0x7b://LD (n'n),SP
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			byte1=Memory(pushpair);pushpair++;
+			byte2=Memory(pushpair);
+			SP_REG=byte1 | (byte2<<8);
+			DEBUG_CODE("DEBUG LD SP,(n'n)\n");
+		break;
+		case 0x43://LD (n'n),BC
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			Memory(pushpair)=C_REG;pushpair++;
+			Memory(pushpair)=B_REG;
+			DEBUG_CODE("DEBUG LD (n'n),BC\n");
+		break;
+		case 0x53://LD (n'n),DE
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			Memory(pushpair)=E_REG;pushpair++;
+			Memory(pushpair)=D_REG;
+			DEBUG_CODE("DEBUG LD (n'n),DE\n");
+		break;
+		case 0x63://LD (n'n),HL
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			Memory(pushpair)=L_REG;pushpair++;
+			Memory(pushpair)=H_REG;
+			DEBUG_CODE("DEBUG LD (n'n),HL\n");
+		break;
+		case 0x73://LD (n'n),SP
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			Memory(pushpair)=SP_REG&0xff;pushpair++;
+			Memory(pushpair)=(SP_REG>>8)&0xff;
+			DEBUG_CODE("DEBUG LD (n'n),SP\n");
+		break;
 		case 0x6f://RLD
 			mem1=A_REG & 0xf0;
 			mem2=A_REG & 0x0f;
@@ -350,45 +521,64 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 		break;
 		case 0xa3://OUTI
 			mem1=Memory(HL_REG);
-			printf("HL=%x (%d)=%x\n",HL_REG,HL_REG,mem1);
-			IOMemory[C_REG]=mem1;
+			//printf("HL=%04x (%04x)=%02x\n",HL_REG,HL_REG,mem1);
+			//IOMemory[C_REG]=mem1;
 			B_REG--;
 			HL_REG++;
+			IOAccessFlag=IO_OUT;
+			IOAccessPort=C_REG;//IOアクセスポート番号
+			IOAccessData=mem1;//書き込み時の同期データ
+			if(IOTaskCallback!=NULL){IOTaskCallback();}
+
 			N_FLAG=1;Z_FLAG=(B_REG==0);
 			DEBUG_CODE("DEBUG OUTI\n");
 		break;
 		case 0xb3://OUTIR
 			do{
 				mem1=Memory(HL_REG);
-				IOMemory[C_REG]=mem1;
+				//IOMemory[C_REG]=mem1;
 				B_REG--;
 				HL_REG++;
+				IOAccessFlag=IO_OUT;
+				IOAccessPort=C_REG;//IOアクセスポート番号
+				IOAccessData=mem1;//書き込み時の同期データ
+				if(IOTaskCallback!=NULL){IOTaskCallback();}
 			}while(B_REG!=0);
 			N_FLAG=1;Z_FLAG=1;
 			DEBUG_CODE("DEBUG OUTIR\n");
 		break;
 		case 0xab://OUTD
 			mem1=Memory(HL_REG);
-			printf("(HL)=%x\n",mem1);
-			IOMemory[C_REG]=mem1;
+			//printf("(HL)=%x\n",mem1);
+			//IOMemory[C_REG]=mem1;
 			B_REG--;
 			HL_REG--;
+			IOAccessPort=C_REG;//IOアクセスポート番号
+			IOAccessData=mem1;//書き込み時の同期データ
+			if(IOTaskCallback!=NULL){IOTaskCallback();}
 			N_FLAG=1;Z_FLAG=(B_REG==0);
 			DEBUG_CODE("DEBUG OUTD\n");
 		break;
 		case 0xbb://OUTDR
 			do{
 				mem1=Memory(HL_REG);
-				IOMemory[C_REG]=mem1;
+				//IOMemory[C_REG]=mem1;
 				B_REG--;
 				HL_REG--;
+				IOAccessFlag=IO_OUT;
+				IOAccessPort=C_REG;//IOアクセスポート番号
+				IOAccessData=mem1;//書き込み時の同期データ
 			}while(B_REG!=0);
 			N_FLAG=1;Z_FLAG=1;
 			DEBUG_CODE("DEBUG OUTDR\n");
 		break;
 		case 0xa2://INI
-			mem1=IOMemory[C_REG];
-			Memory(HL_REG)=mem1;
+			//mem1=IOMemory[C_REG];
+			//Memory(HL_REG)=mem1;
+			IOAccessFlag=IO_IN;
+			IOAccessPort=C_REG;//IOアクセスポート番号
+			if(IOTaskCallback!=NULL){IOTaskCallback();}
+			Memory(HL_REG)=IOAccessData;//読み込み時の同期データ
 			B_REG--;
 			HL_REG++;
 			N_FLAG=1;Z_FLAG=(B_REG==0);
@@ -396,8 +586,12 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 		break;
 		case 0xb2://INIR
 			do{
-				mem1=IOMemory[C_REG];
-				Memory(HL_REG)=mem1;
+				//mem1=IOMemory[C_REG];
+				//Memory(HL_REG)=mem1;
+				IOAccessFlag=IO_IN;
+				IOAccessPort=C_REG;//IOアクセスポート番号
+				if(IOTaskCallback!=NULL){IOTaskCallback();}
+				Memory(HL_REG)=IOAccessData;//読み込み時の同期データ
 				B_REG--;
 				HL_REG++;
 			}while(B_REG!=0);
@@ -405,8 +599,12 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 			DEBUG_CODE("DEBUG INIR\n");
 		break;
 		case 0xaa://IND
-			mem1=IOMemory[C_REG];
-			Memory(HL_REG)=mem1;
+			//mem1=IOMemory[C_REG];
+			//Memory(HL_REG)=mem1;
+			IOAccessFlag=IO_IN;
+			IOAccessPort=C_REG;//IOアクセスポート番号
+			if(IOTaskCallback!=NULL){IOTaskCallback();}
+			Memory(HL_REG)=IOAccessData;//読み込み時の同期データ
 			B_REG--;
 			HL_REG--;
 			N_FLAG=1;Z_FLAG=(B_REG==0);
@@ -414,8 +612,12 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 		break;
 		case 0xba://INDR
 			do{
-				mem1=IOMemory[C_REG];
-				Memory(HL_REG)=mem1;
+				//mem1=IOMemory[C_REG];
+				//Memory(HL_REG)=mem1;
+				IOAccessFlag=IO_IN;
+				IOAccessPort=C_REG;//IOアクセスポート番号
+				if(IOTaskCallback!=NULL){IOTaskCallback();}
+				Memory(HL_REG)=IOAccessData;//読み込み時の同期データ
 				B_REG--;
 				HL_REG--;
 			}while(B_REG!=0);
@@ -520,13 +722,21 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 			switch(down3){
 				case 1://OUT (C),r
 					IOMemory[C_REG]=*SSS_PTR[DDD];
+					IOAccessFlag=IO_OUT;
+					IOAccessPort=C_REG;//IOアクセスポート番号
+					IOAccessData=*SSS_PTR[DDD];//書き込み時の同期データ
+					if(IOTaskCallback!=NULL){IOTaskCallback();}//IO処理コールバック呼び出し
 					DEBUG_CODE("DEBUG OUT (C),r\n");
 				break;
 				case 0://IN r,(C)
-					mem1=IOMemory[C_REG];
+					//mem1=IOMemory[C_REG];
+					IOAccessFlag=IO_OUT;
+					IOAccessPort=C_REG;//IOアクセスポート番号
+					if(IOTaskCallback!=NULL){IOTaskCallback();}//IO処理コールバック呼び出し
+					mem1=IOAccessData;//読み込み時の同期データ
 					*SSS_PTR[DDD]=mem1;
 					H_FLAG=N_FLAG=0;
-					DEBUG_CODE("DEBUG IN (C),r\n");
+					DEBUG_CODE("DEBUG IN r,(C)\n");
 					S_FLAG=(mem1>>7)&1;
 					Z_FLAG=(mem1==0);
 					PV_FLAG=ParityCheck(mem1);
@@ -830,7 +1040,7 @@ char CB_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 		case 0xc0:
 			if(SSS==6){
 				//SET b,(HL)
-				printf("ixiyflag=%d \n",ixiyflag);
+				//printf("ixiyflag=%d \n",ixiyflag);
 				if(ixiyflag==1){
 					PC_REG++;mem2=Memory(PC_REG);
 					hl_reg=hl_reg+mem2;
@@ -856,10 +1066,10 @@ char CB_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 code=実行する命令コード
 ixiyflag=次の1バイトを+dのパラメータにするか命令ごとの判断材料にする
 */
-char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg)
+char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigned char h_reg,unsigned char l_reg,unsigned short* phl_reg)
 {
 	unsigned char mem1,mem2,mem3;//コードの次のデータ
-	unsigned char temp8;//一時的利用
+	unsigned char temp8,byte1,byte2;//一時的利用
 	unsigned short temp16;//一時的利用
 	unsigned short word1,word2,word3;//
 	unsigned short adr1,adr2;//PUSH POP アドレス用
@@ -894,7 +1104,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			#if DEBUG_VIEW
 				printf("IX=%0x IY=%0x\n",IX_REG,IY_REG);
 			#endif
-			Result=CodeAnalysis(NextCode,ixiyflag,IX_REG,IXH_REG,IYH_REG);
+			Result=CodeAnalysis(NextCode,ixiyflag,IX_REG,IXH_REG,IXL_REG,&IX_REG);
 			return Result;
 		break;
 		case 0xfd://IY operation
@@ -908,7 +1118,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			#if DEBUG_VIEW
 				printf("IX=%0x IY=%0x\n",IX_REG,IY_REG);
 			#endif
-			Result=CodeAnalysis(NextCode,ixiyflag,IY_REG,IYH_REG,IYL_REG);
+			Result=CodeAnalysis(NextCode,ixiyflag,IY_REG,IYH_REG,IYL_REG,&IY_REG);
 			return Result;
 		break;
 		case 0xed://
@@ -938,8 +1148,8 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 	switch(code){
 		case 0x36://LD (HL),n
 			PC_REG++;mem1=Memory(PC_REG);
-			printf("ixiyflag=%d \n",ixiyflag);
-			if(ixiyflag==1){
+			//printf("ixiyflag=%d \n",ixiyflag);
+			if(ixiyflag==1){//IX+dのため必要
 				hl_reg=hl_reg+(CHAR8TO16(mem1));
 			//	printf("d=%0d\n",mem1);
 				PC_REG++;mem1=Memory(PC_REG);
@@ -985,20 +1195,40 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			PC_REG++;mem1=Memory(PC_REG);
 			PC_REG++;mem2=Memory(PC_REG);
 			pushpair=mem1 | (mem2<<8);
-			L_REG=Memory(pushpair);pushpair++;
-			H_REG=Memory(pushpair);
+			byte1=Memory(pushpair);pushpair++;
+			byte2=Memory(pushpair);
+			*phl_reg=(byte1 | (byte2<<8));
+				//printf("hl=%0x %0x\n",hl_reg,*phl_reg);
 			DEBUG_CODE("DEBUG LD HL,(nn)\n");
+		break;
+		case 0x21://LD HL,nn
+			PC_REG++;mem1=Memory(PC_REG);
+			PC_REG++;mem2=Memory(PC_REG);
+			pushpair=mem1 | (mem2<<8);
+			*phl_reg=pushpair;
+			DEBUG_CODE("DEBUG LD HL,nn\n");
 		break;
 		case 0x22://LD (nn),HL
 			PC_REG++;mem1=Memory(PC_REG);
 			PC_REG++;mem2=Memory(PC_REG);
 			pushpair=mem1 | (mem2<<8);
-			Memory(pushpair)=L_REG;pushpair++;
-			Memory(pushpair)=H_REG;
+			//printf("pushpair=%x\n",pushpair);
+			Memory(pushpair)=l_reg;pushpair++;
+			Memory(pushpair)=h_reg;
+			//printf("l_reg=%x h_reg=%x\n",l_reg,h_reg);
 			DEBUG_CODE("DEBUG LD (nn),HL\n");
 		break;
+		case 0x23://INC HL
+			*phl_reg=hl_reg+1;
+		//printf("ix=%x *hl=%x ixiyflag=%x hl=%x\n",IX_REG,*phl_reg,ixiyflag,hl_reg);
+			DEBUG_CODE("DEBUG INC HL\n");
+		break;
+		case 0x2b://DEC HL
+			*phl_reg=hl_reg-1;
+			DEBUG_CODE("DEBUG DEC HL\n");
+		break;
 		case 0xf9://LD SP,HL
-			SP_REG=HL_REG;
+			SP_REG=hl_reg;
 			DEBUG_CODE("DEBUG LD SP,HL\n");
 		break;
 		case 0xeb://EX DE,HL
@@ -1023,9 +1253,11 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			mem1=Memory(SP_REG);
 			mem2=Memory((SP_REG+1)& MAX_MEMORY_SIZE);
 			pushpair=mem1 | (mem2<<8);
-			Memory(SP_REG)=HL_REG & 0xff;
-			Memory((SP_REG+1)&0xffff)=(HL_REG>>8) & 0xff;
-			HL_REG=pushpair;
+		//	Memory(SP_REG)=hl_reg & 0xff;
+		//	Memory((SP_REG+1)&0xffff)=(hl_reg>>8) & 0xff;
+			Memory(SP_REG)=l_reg;
+			Memory((SP_REG+1)&0xffff)=h_reg;
+			*phl_reg=pushpair;
 			DEBUG_CODE("DEBUG EX (SP),HL\n");
 		break;
 		case 0xf5://PUSH AF
@@ -1035,7 +1267,14 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			Memory(adr1)=F_REG;//(AF_REG)&255;
 			Memory(adr2)=A_REG;//((AF_REG)>>8)&255;
 			DEBUG_CODE("DEBUG PUSH AF\n");
-
+		break;
+		case 0xe5://PUSH HL
+			SP_REG=(SP_REG-2)& MAX_MEMORY_SIZE;
+			adr1=SP_REG;
+			adr2=(SP_REG+1)& MAX_MEMORY_SIZE;
+			Memory(adr1)=l_reg;//(AF_REG)&255;
+			Memory(adr2)=h_reg;//((AF_REG)>>8)&255;
+			DEBUG_CODE("DEBUG PUSH HL\n");
 		break;
 		case 0xf1://POP AF
 			adr1=SP_REG;
@@ -1045,7 +1284,15 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			AF_REG=mem1 | (mem2<<8);
 			SP_REG=(SP_REG+2)& MAX_MEMORY_SIZE;
 			DEBUG_CODE("DEBUG POP AF\n");
-
+		break;
+		case 0xe1://POP HL
+			adr1=SP_REG;
+			adr2=(SP_REG+1)&0xffff;
+			mem1=Memory(adr1);
+			mem2=Memory(adr2);
+			*phl_reg=mem1 | (mem2<<8);
+			SP_REG=(SP_REG+2)& MAX_MEMORY_SIZE;
+			DEBUG_CODE("DEBUG POP HL\n");
 		break;
 		case 0x07://RLCA
 			mem1=(A_REG>>7)&1;
@@ -1339,8 +1586,8 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 
 		break;
 		case 0xe9://JP (HL)
-			mem1=Memory(HL_REG);
-			mem2=Memory((HL_REG+1)& 0xffff);
+			mem1=Memory(hl_reg);
+			mem2=Memory((hl_reg+1)& 0xffff);
 			PC_REG=(mem1 | (mem2<<8))-1;
 			DEBUG_CODE("JP (HL)\n");
 
@@ -1357,10 +1604,10 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				}
 				PC_REG=(PC_REG+pushpair)& 0xffff;
 			}
-		printf("JR e:pushpair=%x \n",pushpair);
+		//printf("JR e:pushpair=%x \n",pushpair);
 		break;
 		case 0xcd://CALL nn
-			pushpair=(PC_REG+2)&0xffff;
+			pushpair=(PC_REG+3)&0xffff;//2→3修正
 			Memory((SP_REG-1)& 0xffff)=(pushpair>>8)&0xff;
 			Memory((SP_REG-2)& 0xffff)=(pushpair)&0xff;
 			SP_REG=SP_REG-2;
@@ -1391,13 +1638,24 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 		case 0xdb://IN A,(n)
 			PC_REG++;
 			mem2=Memory(PC_REG);
-			A_REG=IOMemory[mem2];
+		//printf("IN A,(%d) \n",mem2);
+			//A_REG=IOMemory[mem2];
+			IOAccessFlag=IO_IN;
+			IOAccessPort=mem2;//IOアクセスポート番号
+			if(IOTaskCallback!=NULL){IOTaskCallback();}
+			A_REG=IOAccessData;//読み込み時の同期データ
+
 			DEBUG_CODE("DEBUG IN A,(n)\n");
 		break;
 		case 0xd3://OUT (n),A
 			PC_REG++;
 			mem2=Memory(PC_REG);
-			IOMemory[mem2]=A_REG;
+			//IOMemory[mem2]=A_REG;
+			IOAccessFlag=IO_OUT;
+			IOAccessPort=mem2;//IOアクセスポート番号
+			IOAccessData=A_REG;//書き込み時の非同期データ
+			if(IOTaskCallback!=NULL){IOTaskCallback();}
+
 			DEBUG_CODE("DEBUG OUT (n),A\n");
 		break;
 		case 0x27://DAA
@@ -1585,9 +1843,12 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 
 					break;
 					case 0x9://ADD HL,rp
-						word1=HL_REG;
-						calcvalue32=HL_REG + *RP_PTR[RP];
-						HL_REG=(unsigned short)calcvalue32;
+				//		word1=HL_REG;
+				//		calcvalue32=HL_REG + *RP_PTR[RP];
+				//		HL_REG=(unsigned short)calcvalue32;
+						word1=*phl_reg;
+						calcvalue32=*phl_reg + *RP_PTR[RP];
+						*phl_reg=(unsigned short)calcvalue32;
 						SetFlagADDSUB16(calcvalue32,word1,0);
 						DEBUG_CODE("DEBUG ADD HL,rp\n");
 					break;
@@ -1689,7 +1950,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 
 					break;
 					case 0x4://CALL cc,nn
-						pushpair=(PC_REG+2)&0xffff;
+						pushpair=(PC_REG+3)&0xffff;//2→3修正
 						Memory((SP_REG-1)& 0xffff)=(pushpair>>8)&0xff;
 						Memory((SP_REG-2)& 0xffff)=(pushpair)&0xff;
 						mem1=Memory((PC_REG+1)& 0xffff);
@@ -1766,7 +2027,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 
 					break;
 					case 0x7://RST p
-						pushpair=(PC_REG+1)&0xffff;
+						pushpair=(PC_REG+2)&0xffff;//1→2修正
 						Memory((SP_REG-1)& 0xffff)=(pushpair>>8)&0xff;
 						Memory((SP_REG-2)& 0xffff)=(pushpair)&0xff;
 						//pushpair=DDD * 8;
