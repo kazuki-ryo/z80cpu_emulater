@@ -161,14 +161,14 @@ void VDPTask()
 			if(VRAMAddress>=VDP_PATTERN_NAME_TABLE && VRAMAddress<(VDP_PATTERN_NAME_TABLE+256*3)){
 				VRAMVirtualAddress[VRAMAddress-VDP_PATTERN_NAME_TABLE]=VDPPort[0];
 			}
-			VRAMAddress++;
+			VRAMAddress=(VRAMAddress+1) & 0x3fff;//16KB範囲
 			VRAMAddressSetting=0;//１回出力ごとにアドレス設定のフラグをリセットする
 		}else{
 			//読み込みモード
 			if(VRAMAddress>=VDP_PATTERN_NAME_TABLE && VRAMAddress<(VDP_PATTERN_NAME_TABLE+256*3)){
 				IOAccessData=VRAMVirtualAddress[VRAMAddress-VDP_PATTERN_NAME_TABLE];
 			}
-			VRAMAddress++;
+			VRAMAddress=(VRAMAddress+1) & 0x3fff;//16KB範囲
 			VRAMAddressSetting=0;//１回出力ごとにアドレス設定のフラグをリセットする
 		}
 		break;
@@ -243,7 +243,7 @@ int TaskMain()
 		#endif
 		//コード解析
 //		char State=CodeAnalysis(code,0,*hl_reg,*h_reg,*l_reg);
-		char State=CodeAnalysis(code,0,HL_REG,H_REG,L_REG,&HL_REG);
+		char State=CodeAnalysis(code,0,HL_REG,&H_REG,&L_REG,&HL_REG);
 		if(State==1){
 			break;//中断
 		}
@@ -267,6 +267,7 @@ int TaskMain()
 		ViewMemory();
 		printf("--\n");
 		#endif
+		//非同期でIO処理を実行するならここで処理する
 		//IOTask();
 	}
 	return 0;
@@ -283,10 +284,37 @@ int main(int argc,char* argv[])
 	for(a=0;a<sizeof(BDOS_SYSTEM);a++){
 		WorkMemory[a]=BDOS_SYSTEM[a];
 	}
-	//テストコードをメモリに設定
-	for(a=0;a<sizeof(SampleData);a++){
-		WorkMemory[a+256]=SampleData[a];
+	if(argc>1){
+		//ファイルから読み込み
+		FILE *fp=fopen(argv[1],"rb");
+		if(fp!=NULL){
+			printf("Read file is %s\n",argv[1]);
+			int size=fread(_WorkMemory+256,1,sizeof(_WorkMemory)-256,fp);
+			fclose(fp);
+			if(size<1){
+				printf("Bad read file.\n");
+				return -1;
+			}else{
+				printf("%d bytes readed.\n",size);
+			}
+		}else{
+			printf("File not found.\n");
+			return -1;
+		}
+	}else{
+		//ファイル無指定の場合に実行するコード
+		//テストコードをメモリに設定
+		for(a=0;a<sizeof(SampleData);a++){
+			WorkMemory[a+256]=SampleData[a];
+		}
 	}
+	//メモリ表示
+	printf("Memory View[0100h-01ffh]\n");
+	for(a=0;a<256;a++){
+		printf("%02X,",_WorkMemory[a+0x0100]);
+	}
+	printf("\n");
+	printf("Code Execute start!\n");
 	//レジスタ初期化
 	InitRegister();
 	//エミュレータ起動
