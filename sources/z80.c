@@ -150,16 +150,34 @@ void InitZ80(unsigned char* mem,unsigned char* iomem)
 value=演算後の値(16bit)
 bytes=演算前の値
 */
-void SetFlagADDSUB16(int value,unsigned short word2,unsigned char sub)
+void SetFlagADDSUB16(int value,unsigned short word2,unsigned short word3,unsigned char sub)
 {
-	unsigned int word;
+	unsigned int word,flagcalc;
 	unsigned char P_Count=0,i;
 	word=(unsigned short)value & 0xffff;
 	N_FLAG=sub;//加算1,減算0
-	if(value>0xffff){C_FLAG=1;}else{C_FLAG=0;}
+	/*
+	if(sub==0){
+		if(value>0xffff){C_FLAG=1;}else{C_FLAG=0;}
+		//if((word2&8)==8 && (word&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+	}else{
+		if(value<0){C_FLAG=1;}else{C_FLAG=0;}
+		//if((word2&8)==0 && (word&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+	}*/
+	C_FLAG=(value >>16)&1;
+	flagcalc=(word2 ^ word3 ^ word) & 0x1000;
+	H_FLAG=flagcalc >> 12;
+	//printf("flagcalc=%x H_FLAG=%x \n",flagcalc,H_FLAG);
 	//bit3からbit4に桁上がりがある場合
-	if((word2&0x8000)==0 && (word&0x8000)==0x8000){H_FLAG=1;}else{H_FLAG=0;}
+	if((word&0x8000)==0x8000){
+		S_FLAG=1;
+//		if((word2&0x8000)==0 ){H_FLAG=1;}else{H_FLAG=0;}
+		
+	}else{
+		S_FLAG=0;H_FLAG=0;
+	}
 	//Z,P,PVは変化せず
+	if(word==0){Z_FLAG=1;}else{Z_FLAG=0;}
 }
 
 /**
@@ -167,12 +185,12 @@ void SetFlagADDSUB16(int value,unsigned short word2,unsigned char sub)
 value=演算後の値(16bit)
 bytes=演算前の値
 */
-void SetFlagADD(short value,unsigned char byte2)
+void SetFlagADD(short value,unsigned char byte2,unsigned char byte3)
 {
 	unsigned char byte;
 	unsigned char P_Count=0,i;
 	byte=(unsigned char)value & 0xff;
-	N_FLAG=1;//加算1,減算0
+	N_FLAG=0;//加算0,減算1
 	if(value>255){C_FLAG=1;}else{C_FLAG=0;}
 	if(byte==0){Z_FLAG=1;}else{Z_FLAG=0;}
 	//if(byte & 0x80){S_FLAG=1;}else{S_FLAG=0;}
@@ -182,7 +200,8 @@ void SetFlagADD(short value,unsigned char byte2)
 	if(value>127){PV_FLAG=1;}
 	if(value<-128){PV_FLAG=1;}
 	//bit3からbit4に桁上がりがある場合
-	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+//	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+	H_FLAG=((byte ^ byte2 ^ byte3)>>4)&1;
 	/*
 	//論理演算の場合のみ1をカウントする
 	for(i=0;i<8;i++){
@@ -197,7 +216,7 @@ void SetFlagADD(short value,unsigned char byte2)
 value=演算後の値(16bit)
 bytes=演算前の値
 */
-void SetFlagSUB(short value,unsigned char byte2)
+void SetFlagSUB(short value,unsigned char byte2,unsigned char byte3)
 {
 	unsigned char byte;
 	unsigned char P_Count=0,i;
@@ -215,14 +234,15 @@ void SetFlagSUB(short value,unsigned char byte2)
 	if(value<128 && byte2>127){PV_FLAG=1;}
 	//bit3からbit4に桁上がりがある場合
 //	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
-	if((byte2&8)==0 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+//	if((byte2&8)==0 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+	H_FLAG=((byte ^ byte2 ^ byte3)>>4)&1;
 }
 /**
 ブロック比較実行時のフラグ設定
 value=演算後の値(16bit)
 bytes=演算前の値
 */
-void SetFlagCP(short value,unsigned char byte2)
+void SetFlagCP(short value,unsigned char byte2,unsigned char byte3)
 {
 	unsigned char byte;
 	unsigned char P_Count=0,i;
@@ -238,7 +258,9 @@ void SetFlagCP(short value,unsigned char byte2)
 	if(value<128 && byte2>127){PV_FLAG=1;}
 	//bit3からbit4に桁上がりがある場合
 //	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
-	if((byte2&8)==0 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+//	if((byte2&8)==0 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+	H_FLAG=((byte ^ byte2 ^ byte3)>>4)&1;
+
 }
 
 /**
@@ -260,7 +282,9 @@ void SetFlagINCDEC(short value,unsigned char byte2,unsigned char dec)
 	if(value>127){PV_FLAG=1;}
 	if(value<-128){PV_FLAG=1;}
 	//bit3からbit4に桁上がりがある場合
-	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+//	if((byte2&8)==8 && (byte&16)==16){H_FLAG=1;}else{H_FLAG=0;}
+	H_FLAG=((byte ^ byte2)>>4)&1;
+
 //	printf("byte=%x byte2=%x\n",byte,byte2);
 //	printf("byte=%x byte2=%x\n",byte&16,byte2&8);
 }
@@ -313,7 +337,7 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 	unsigned char up2=code & 0xc0;//上位2ビット
 //	unsigned char up5=code & 0xf8;//上位5ビット
 	unsigned char down3=code & 0x07;//下位3ビット
-//	unsigned char down4=code & 0x0f;//下位4ビット
+	unsigned char down4=code & 0x0f;//下位4ビット
 	unsigned char DDD=(code>>3) & 0x7;//中3ビット
 //	unsigned char CCC=(code>>3) & 0x7;//中3ビット
 //	unsigned char SSS=code & 0x7;//下3ビット
@@ -328,6 +352,9 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 //	#endif
 	Cycle=0;
 	switch(code){
+		case 0x76://エミュレータ強制終了(HALT)
+			DEBUG_CODE("DEBUG EMULATOR STOP\n");
+			return 1;
 		case 0xc5://DIV A,B 拡張命令
 			if(B_REG>0){
 				L_REG=A_REG/B_REG;
@@ -627,22 +654,24 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 			DEBUG_CODE("DEBUG INDR\n");
 		break;
 		case 0xa1://CPI
-			mem1=Memory(HL_REG);
-			word1=A_REG- mem1;
+			mem1=A_REG;
+			mem2=Memory(HL_REG);
+			word1=A_REG- mem2;
 			BC_REG--;
 			HL_REG++;
-			SetFlagCP(word1,A_REG);
+			SetFlagCP(word1,mem1,mem2);
 			PV_FLAG=(BC_REG!=0);
 			DEBUG_CODE("DEBUG CPI\n");
 		break;
 		case 0xb1://CPIR
+			mem1=A_REG;
 			do{
-				mem1=Memory(HL_REG);
-				word1=A_REG- mem1;
+				mem2=Memory(HL_REG);
+				word1=A_REG- mem2;
 				BC_REG--;
 				HL_REG++;
-			}while(BC_REG!=0 && A_REG!=mem1);
-			SetFlagCP(word1,A_REG);
+			}while(BC_REG!=0 && A_REG!=mem2);
+			SetFlagCP(word1,mem1,mem2);
 			PV_FLAG=(BC_REG!=0);
 			DEBUG_CODE("DEBUG CPIR\n");
 		break;
@@ -651,7 +680,7 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 			word1=A_REG- mem1;
 			BC_REG--;
 			HL_REG--;
-			SetFlagCP(word1,A_REG);
+			SetFlagCP(word1,A_REG,mem1);
 			PV_FLAG=(BC_REG!=0);
 			DEBUG_CODE("DEBUG CPD\n");
 		break;
@@ -662,7 +691,7 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 				BC_REG--;
 				HL_REG--;
 			}while(BC_REG!=0 && A_REG!=mem1);
-			SetFlagCP(word1,A_REG);
+			SetFlagCP(word1,A_REG,mem1);
 			PV_FLAG=(BC_REG!=0);
 			DEBUG_CODE("DEBUG CPDR\n");
 		break;
@@ -763,10 +792,14 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 			DEBUG_CODE("DEBUG LD R,A\n");
 		break;
 	}
+
+	unsigned char RP=(code>>4)&3;//中2ビット
+
 	switch(up2){
 		case 0x40:
-			switch(down3){
+			switch(down4){
 				case 1://OUT (C),r
+				case 9://OUT (C),r
 					IOMemory[C_REG]=*SSS_PTR[DDD];
 					IOAccessFlag=IO_OUT;
 					IOAccessPort=C_REG;//IOアクセスポート番号
@@ -775,6 +808,7 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 					DEBUG_CODE("DEBUG OUT (C),r\n");
 				break;
 				case 0://IN r,(C)
+				case 8://IN r,(C)
 					//mem1=IOMemory[C_REG];
 					IOAccessFlag=IO_IN;
 					IOAccessPort=C_REG;//IOアクセスポート番号
@@ -787,6 +821,20 @@ char ED_CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsi
 					Z_FLAG=(mem1==0);
 					PV_FLAG=ParityCheck(mem1);
 				break;
+				case 10://ADC HL,rr
+						word1=HL_REG;word2=*RP_PTR[RP] + C_FLAG;
+						calcvalue32=HL_REG + word2;
+						HL_REG=(unsigned short)calcvalue32;
+						SetFlagADDSUB16(calcvalue32,word1,word2,0);
+						DEBUG_CODE("DEBUG ADC HL,rp\n");
+					break;
+				case 2://SBC HL,rr
+						word1=HL_REG;word2=*RP_PTR[RP] + C_FLAG;
+						calcvalue32=HL_REG - word2;
+						HL_REG=(unsigned short)calcvalue32;
+						SetFlagADDSUB16(calcvalue32,word1,word2,1);
+						DEBUG_CODE("DEBUG SBC HL,rp\n");
+					break;
 			}
 		break;
 	}
@@ -1140,8 +1188,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			return 0;
 		break;
 			case 0x76://HALT(エミュレータ停止）
-			DEBUG_CODE("DEBUG HALT\n");
-			return 1;
+			return 0;
 		break;
 		case 0xdd://IX operation
 			//NextCodeIX=1;
@@ -1377,7 +1424,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				PC_REG++;mem2=Memory(PC_REG);
 				calcvalue=(short)A_REG+mem2+C_FLAG;
 				A_REG=calcvalue & 0xff;
-				SetFlagADD(calcvalue,mem1);
+				SetFlagADD(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG ADC A,r\n");
 		break;
 		case 0x86://ADD A,(HL)
@@ -1386,10 +1433,10 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				PC_REG++;mem2=Memory(PC_REG);
 				hl_reg=hl_reg+(CHAR8TO16(mem2));
 			}
-
-			calcvalue=(short)A_REG+Memory(hl_reg);
+			mem2=Memory(hl_reg);
+			calcvalue=(short)A_REG+mem2;
 			A_REG=calcvalue & 0xff;
-			SetFlagADD(calcvalue,mem1);
+			SetFlagADD(calcvalue,mem1,mem2);
 			DEBUG_CODE("DEBUG ADD A,(HL)\n");
 		break;
 		case 0x8e://ADC A,(HL)
@@ -1398,10 +1445,10 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				PC_REG++;mem2=Memory(PC_REG);
 				hl_reg=hl_reg+(CHAR8TO16(mem2));
 			}
-
-			calcvalue=(short)A_REG+Memory(hl_reg)+C_FLAG;
+			mem2=Memory(hl_reg)+C_FLAG;
+			calcvalue=(short)A_REG+mem2;
 			A_REG=calcvalue & 0xff;
-			SetFlagADD(calcvalue,mem1);
+			SetFlagADD(calcvalue,mem1,mem2);
 			DEBUG_CODE("DEBUG ADC A,(HL)\n");
 		break;
 		case 0x34://INC (HL)
@@ -1419,45 +1466,49 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 		break;
 		case 0xd6://SUB n
 				mem1=A_REG;
-				PC_REG++;mem2=Memory(PC_REG);
+				PC_REG++;
+				mem2=Memory(PC_REG);
 				calcvalue=(short)A_REG-mem2;
 		//printf("calcvalue=%x mem1=%x \n",calcvalue,mem1);
 				A_REG=calcvalue & 0xff;
-				SetFlagSUB(calcvalue,mem1);
+				SetFlagSUB(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG SUB n\n");
 		break;
 		case 0xde://SBC n
 				mem1=A_REG;
-				PC_REG++;mem2=Memory(PC_REG);
-				calcvalue=(short)A_REG-mem2-C_FLAG;
+				PC_REG++;
+				mem2=Memory(PC_REG)+C_FLAG;
+				calcvalue=(short)A_REG-mem2;
 //		printf("calcvalue=%x mem1=%x \n",calcvalue,mem1);
 				A_REG=calcvalue & 0xff;
-				SetFlagSUB(calcvalue,mem1);
+				SetFlagSUB(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG SBC A,n\n");
 		break;
 
 		case 0x96://SUB (HL)
+			mem1=A_REG;
 			if(ixiyflag==1){
 				PC_REG++;mem2=Memory(PC_REG);
 				hl_reg=hl_reg+(CHAR8TO16(mem2));
 			}
-			mem1=Memory(hl_reg);
-			calcvalue=A_REG-mem1;
+			mem2=Memory(hl_reg);
+			calcvalue=A_REG-mem2;
 //		printf("mem1=%x calcvalue=%d\n",mem1,calcvalue);
 			A_REG=calcvalue & 0xff;
-			SetFlagSUB(calcvalue,mem1);
+			SetFlagSUB(calcvalue,mem1,mem2);
 			DEBUG_CODE("DEBUG SUB (HL)\n");
 		break;
 		case 0x9E://SBC A,(HL)
+			mem1=A_REG;
 			if(ixiyflag==1){
 				PC_REG++;mem2=Memory(PC_REG);
 				hl_reg=hl_reg+(CHAR8TO16(mem2));
 			}
-			mem1=Memory(hl_reg);
-			calcvalue=A_REG-mem1-C_FLAG;
+			mem2=Memory(hl_reg)+C_FLAG;
+			calcvalue=A_REG-mem2;
 //		printf("mem1=%x calcvalue=%d\n",mem1,calcvalue);
 			A_REG=calcvalue & 0xff;
-			SetFlagSUB(calcvalue,mem1);
+			SetFlagSUB(calcvalue,mem1,mem2);
 			DEBUG_CODE("DEBUG SBC A,(HL)\n");
 		break;
 		case 0x35://DEC (HL)
@@ -1534,20 +1585,21 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 		break;
 		case 0xfe://CP n
 			mem1=A_REG;
-			PC_REG++;mem2=Memory(PC_REG);
+			PC_REG++;
+			mem2=Memory(PC_REG);
 			calcvalue=(short)(A_REG-mem2);
-			SetFlagSUB(calcvalue,mem1);
+			SetFlagSUB(calcvalue,mem1,mem2);
 			DEBUG_CODE("DEBUG CP n\n");
 		break;
 		case 0xbe://CP (HL)
+			mem1=A_REG;
 			if(ixiyflag==1){
 				PC_REG++;mem2=Memory(PC_REG);
 				hl_reg=hl_reg+(CHAR8TO16(mem2));
 			}
 			mem2=Memory(hl_reg);
-			mem1=A_REG;
 			calcvalue=(short)A_REG-mem2;
-			SetFlagSUB(calcvalue,mem1);
+			SetFlagSUB(calcvalue,mem1,mem2);
 			DEBUG_CODE("DEBUG CP (HL)\n");
 		break;
 		case 0x3f://CCF
@@ -1755,7 +1807,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			mem2=Memory(PC_REG);
 			calcvalue=(short)A_REG+mem2;
 			A_REG=calcvalue & 0xff;
-			SetFlagADD(calcvalue,temp8);
+			SetFlagADD(calcvalue,temp8,mem2);
 			DEBUG_CODE("DEBUG ADD A,n\n");
 		break;
 		default:
@@ -1803,30 +1855,34 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			break;
 			case 0x80://ADD A,r
 				mem1=A_REG;
-				calcvalue=(short)A_REG+(*SSS_PTR[SSS]);
+				mem2=(*SSS_PTR[SSS]);
+				calcvalue=(short)A_REG+mem2;
 				A_REG=calcvalue & 0xff;
-				SetFlagADD(calcvalue,mem1);
+				SetFlagADD(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG ADD A,r\n");
 			break;
 			case 0x88://ADC A,r
 				mem1=A_REG;
-				calcvalue=(short)A_REG+(*SSS_PTR[SSS])+C_FLAG;
+				mem2=(*SSS_PTR[SSS])+C_FLAG;
+				calcvalue=(short)A_REG+mem2;
 				A_REG=calcvalue & 0xff;
-				SetFlagADD(calcvalue,mem1);
+				SetFlagADD(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG ADD A,r\n");
 			break;
 			case 0x90://SUB r
 				mem1=A_REG;
-				calcvalue=(short)A_REG-(*SSS_PTR[SSS]);
+				mem2=(*SSS_PTR[SSS]);
+				calcvalue=(short)A_REG-mem2;
 				A_REG=calcvalue & 0xff;
-				SetFlagSUB(calcvalue,mem1);
+				SetFlagSUB(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG SUB r\n");
 			break;
 			case 0x98://SBC A,r
 				mem1=A_REG;
-				calcvalue=(short)A_REG-(*SSS_PTR[SSS])-C_FLAG;
+				mem2=(*SSS_PTR[SSS])+C_FLAG;
+				calcvalue=(short)A_REG-mem2;
 				A_REG=calcvalue & 0xff;
-				SetFlagSUB(calcvalue,mem1);
+				SetFlagSUB(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG SBC A,r\n");
 			break;
 			case 0xa0://AND r
@@ -1850,8 +1906,9 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 			break;
 			case 0xb8://CP r
 				mem1=A_REG;
-				calcvalue=(short)A_REG-(*SSS_PTR[SSS]);
-				SetFlagSUB(calcvalue,mem1);
+				mem2=(*SSS_PTR[SSS]);
+				calcvalue=(short)A_REG-mem2;
+				SetFlagSUB(calcvalue,mem1,mem2);
 				DEBUG_CODE("DEBUG CP r\n");
 			break;
 			default:
@@ -1895,10 +1952,10 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 				//		word1=HL_REG;
 				//		calcvalue32=HL_REG + *RP_PTR[RP];
 				//		HL_REG=(unsigned short)calcvalue32;
-						word1=*phl_reg;
-						calcvalue32=*phl_reg + *RP_PTR[RP];
+						word1=*phl_reg;word2=*RP_PTR[RP];
+						calcvalue32=*phl_reg + word2;
 						*phl_reg=(unsigned short)calcvalue32;
-						SetFlagADDSUB16(calcvalue32,word1,0);
+						SetFlagADDSUB16(calcvalue32,word1,word2,0);
 						DEBUG_CODE("DEBUG ADD HL,rp\n");
 					break;
 					case 0x3://INC rp
@@ -1920,7 +1977,7 @@ char CodeAnalysis(unsigned char code,char ixiyflag,unsigned short hl_reg,unsigne
 					case 0x4://INC r
 						mem1=*SSS_PTR[DDD];
 						calcvalue=mem1+1;
-//					printf("mem1=%x calcvalue=%d\n",mem1,calcvalue);
+					//printf("mem1=%x calcvalue=%d\n",mem1,calcvalue);
 						*SSS_PTR[DDD]=calcvalue & 0xff;
 						SetFlagINCDEC(calcvalue,mem1,0);
 						DEBUG_CODE("DEBUG INC r\n");

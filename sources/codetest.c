@@ -423,69 +423,75 @@ int Test_SHIFT()
 int Test_CALC()
 {
 	ErrorUnit=0;
-
 	//
 	printf("[TEST06]ADD 8BIT\n");
 	//
+	A_REG=0x1;B_REG=0x1f;
+	TestCode(0,"ADD A,B",0x80,0,0,0);
+	CheckCode(A_REG==0x20 && N_FLAG==0 && PV_FLAG==0 && H_FLAG==1);
+	//
 	A_REG=0x1;B_REG=0x5;
 	TestCode(0,"ADD A,B",0x80,0,0,0);
-	CheckCode(A_REG==0x6 && N_FLAG==1 && PV_FLAG==0);
+	CheckCode(A_REG==0x6 && N_FLAG==0 && PV_FLAG==0);
 	//
 	A_REG=0x70;
 	TestCode(0,"ADD A,0x10",0xC6,0x10,0,0);
-	CheckCode(A_REG==0x80 && N_FLAG==1 && PV_FLAG==1 && C_FLAG==0);
+	CheckCode(A_REG==0x80 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==0);
 	A_REG=0xF0;
 	TestCode(0,"ADD A,0x10",0xC6,0x10,0,0);
-	CheckCode(A_REG==0x00 && N_FLAG==1 && PV_FLAG==1 && C_FLAG==1 && Z_FLAG==1);
+	CheckCode(A_REG==0x00 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==1 && Z_FLAG==1);
 	//
 	A_REG=0x70;C_FLAG=1;B_REG=0x10;
 	TestCode(0,"ADC A,B",0x88,0x70,0,0);
-	CheckCode(A_REG==0x81 && N_FLAG==1 && PV_FLAG==1 && C_FLAG==0);
+	CheckCode(A_REG==0x81 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==0);
+	//
 	A_REG=0xF0;C_FLAG=1;B_REG=0x10;
 	TestCode(0,"ADC A,B",0x88,0x10,0,0);
-	CheckCode(A_REG==0x01 && N_FLAG==1 && PV_FLAG==1 && C_FLAG==1);
+	CheckCode(A_REG==0x01 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==1);
 	//
 	A_REG=0x70;C_FLAG=1;
 	TestCode(0,"ADC A,0x70",0xce,0x10,0,0);
-	CheckCode(A_REG==0x81 && N_FLAG==1 && PV_FLAG==1 && C_FLAG==0);
+	CheckCode(A_REG==0x81 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==0);
 	A_REG=0xF0;C_FLAG=1;
 	TestCode(0,"ADC A,0x10",0xce,0x10,0,0);
-	CheckCode(A_REG==0x01 && N_FLAG==1 && PV_FLAG==1 && C_FLAG==1);
+	CheckCode(A_REG==0x01 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==1);
+	//
+	A_REG=0x4;C_FLAG=1;HL_REG=2;
+	TestCode(0,"ADC A,(HL)",0x8e,0,1,0);
+	CheckCode(A_REG==0x6 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
+	//
+	A_REG=0x4;C_FLAG=1;HL_REG=2;
+	TestCode(0,"ADD A,(HL)",0x86,0,1,0);
+	CheckCode(A_REG==0x5 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
+	//
+	A_REG=0x4;C_FLAG=1;IX_REG=4;Memory(4)=1;
+	TestCode(0,"ADC A,(IX+d)",0xdd,0x8e,0,0);
+	CheckCode(A_REG==0x6 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
+	//
+	A_REG=0x4;C_FLAG=1;IX_REG=4;Memory(4)=1;
+	TestCode(0,"ADD A,(IX+d)",0xdd,0x86,0,0);
+	CheckCode(A_REG==0x5 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
 	//
 	A_REG=0x7f;N_FLAG=1;
 	TestCode(0,"INC A",0x3c,0x00,0,0);
-	CheckCode(A_REG==0x80 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==0 && H_FLAG==0 && S_FLAG==1);
+	CheckCode(A_REG==0x80 && N_FLAG==0 && PV_FLAG==1 && C_FLAG==0 && H_FLAG==1 && S_FLAG==1);
 	A_REG=0x0f;N_FLAG=1;
 	TestCode(0,"INC A",0x3c,0x00,0,0);
 	CheckCode(A_REG==0x10 && N_FLAG==0 && PV_FLAG==0 && C_FLAG==0 && H_FLAG==1 && S_FLAG==0);
 	//
-	A_REG=0x4;C_FLAG=1;HL_REG=2;
-	TestCode(0,"ADC A,(HL)",0x8e,0,1,0);
-	CheckCode(A_REG==0x6 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	//
-	A_REG=0x4;C_FLAG=1;HL_REG=2;
-	TestCode(0,"ADD A,(HL)",0x86,0,1,0);
-	CheckCode(A_REG==0x5 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	//
 	HL_REG=0x02;
-	TestCode(0,"INC (HL)",0x34,0,3,0);
-	CheckCode(Memory(2)==0x4 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
+	TestCode(0,"INC (HL)",0x34,0,0x3f,0);
+	CheckCode(Memory(2)==0x40 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0 && H_FLAG==1);
 	//
-	A_REG=0x4;C_FLAG=1;IX_REG=4;Memory(4)=1;
-	TestCode(0,"ADC A,(IX+d)",0xdd,0x8e,0,0);
-	CheckCode(A_REG==0x6 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	//
-	A_REG=0x4;C_FLAG=1;IX_REG=4;Memory(4)=1;
-	TestCode(0,"ADD A,(IX+d)",0xdd,0x86,0,0);
-	CheckCode(A_REG==0x5 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	//
-	HL_REG=0x02;IX_REG=4;Memory(4)=3;
+	HL_REG=0x02;IX_REG=4;Memory(4)=15;
 	TestCode(0,"INC (IX+d)",0xdd,0x34,0,0);
-	CheckCode(Memory(4)==0x4 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
+	CheckCode(Memory(4)==0x10 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0 && H_FLAG==1);
 	//
-	HL_REG=0x02;IY_REG=4;Memory(4)=3;
+	HL_REG=0x02;IY_REG=4;Memory(4)=0xf;
 	TestCode(0,"INC (IY+d)",0xfd,0x34,0,0);
-	CheckCode(Memory(4)==0x4 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
+	CheckCode(Memory(4)==0x10 && N_FLAG==0 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0 && H_FLAG==1);
+
+
 	//
 	printf("[TEST07]SUB 8BIT\n");
 	//
@@ -509,26 +515,13 @@ int Test_CALC()
 	TestCode(0,"SBC A,2",0xde,2,0,0);
 	CheckCode(A_REG==0x00 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==1);
 	//
-	B_REG=0x3;
-	TestCode(0,"DEC B",0x5,0,0,0);
-	CheckCode(B_REG==0x02 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0);
-	//
-	HL_REG=0x02;
-	TestCode(0,"DEC (HL)",0x35,0,3,0);
-	CheckCode(Memory(2)==0x2 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
+	A_REG=0x4;C_FLAG=1;HL_REG=2;
+	TestCode(0,"SUB (HL)",0x96,0,1,0);
+	CheckCode(A_REG==0x3 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
 	//
 	A_REG=0x4;C_FLAG=1;HL_REG=2;
 	TestCode(0,"SBC A,(HL)",0x9E,0,1,0);
 	CheckCode(A_REG==0x2 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	//
-	A_REG=0x4;C_FLAG=1;HL_REG=2;
-	TestCode(0,"SUB (HL)",0x96,0,1,0);
-	CheckCode(A_REG==0x3 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	
-	//
-	IX_REG=0x03;
-	TestCode(0,"DEC (IX+d)",0xdd,0x35,0,3);
-	CheckCode(Memory(3)==0x2 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
 	//
 	A_REG=0x4;C_FLAG=1;IX_REG=3;
 	TestCode(0,"SBC A,(IX+d)",0xdd,0x9E,0,1);
@@ -537,13 +530,56 @@ int Test_CALC()
 	A_REG=0x4;C_FLAG=1;IX_REG=3;
 	TestCode(0,"SUB (IX+d)",0xdd,0x96,0,1);
 	CheckCode(A_REG==0x3 && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0);
-	
+	//
+	B_REG=0x10;
+	TestCode(0,"DEC B",0x5,0,0,0);
+	CheckCode(B_REG==0x0f && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && H_FLAG==1);
+	//
+	HL_REG=0x02;
+	TestCode(0,"DEC (HL)",0x35,0,0x10,0);
+	CheckCode(Memory(2)==0xf && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0 && H_FLAG==1);
+	//
+	IX_REG=0x03;
+	TestCode(0,"DEC (IX+d)",0xdd,0x35,0,0);
+	CheckCode(Memory(3)==0xff && N_FLAG==1 && PV_FLAG==0 && Z_FLAG==0 && C_FLAG==0 && H_FLAG==1 && S_FLAG==1);
 	//
 	printf("[TEST08]ADD/SUB 16BIT\n");
 	//
 	HL_REG=0xfffe;BC_REG=0x0002;
 	TestCode(0,"ADD HL,BC",0x09,0,0,0);
-	CheckCode(HL_REG==0x0000 && N_FLAG==0 && C_FLAG==1);
+	CheckCode(HL_REG==0x0000 && N_FLAG==0 && C_FLAG==1 && Z_FLAG==1);
+	//
+	IX_REG=0xfffe;BC_REG=0x0002;
+	TestCode(0,"ADD IX,BC",0xdd,0x09,0,0);
+	CheckCode(IX_REG==0x0000 && N_FLAG==0 && C_FLAG==1);
+	//
+	HL_REG=0x0001;BC_REG=0x0002;C_FLAG=0;
+	TestCode(0,"ADC HL,BC",0xED,0x4A,0,0);
+	CheckCode(HL_REG==0x0003 && N_FLAG==0 && C_FLAG==0);
+	//
+	HL_REG=0x0001;BC_REG=0x0002;C_FLAG=1;
+	TestCode(0,"ADC HL,BC",0xED,0x4A,0,0);
+	CheckCode(HL_REG==0x0004 && N_FLAG==0 && C_FLAG==0);
+	//
+	HL_REG=0x0005;BC_REG=0x0002;C_FLAG=0;
+	TestCode(0,"SBC HL,BC",0xED,0x42,0,0);
+	CheckCode(HL_REG==0x0003 && N_FLAG==1 && C_FLAG==0);
+	//
+	HL_REG=0x0005;BC_REG=0x0002;C_FLAG=1;
+	TestCode(0,"SBC HL,BC",0xED,0x42,0,0);
+	CheckCode(HL_REG==0x0002 && N_FLAG==1 && C_FLAG==0);
+	//
+	HL_REG=0x0005;BC_REG=0x0002;C_FLAG=0;
+	TestCode(0,"SBC HL,HL",0xED,0x62,0,0);
+	CheckCode(HL_REG==0x0000 && N_FLAG==1 && Z_FLAG==1);
+	//
+	HL_REG=0x0005;BC_REG=0x0006;C_FLAG=0;
+	TestCode(0,"SBC HL,BC",0xED,0x42,0,0);
+	CheckCode(HL_REG==0xffff && N_FLAG==1 && C_FLAG==1 && S_FLAG==1 && H_FLAG==1);
+	//
+	HL_REG=0x8000;BC_REG=0x1000;C_FLAG=0;
+	TestCode(0,"SBC HL,BC",0xED,0x42,0,0);
+	CheckCode(HL_REG==0x7000 && N_FLAG==1 && C_FLAG==0 && S_FLAG==0 && H_FLAG==0);
 	//
 	BC_REG=0x0002;C_FLAG=1;
 	TestCode(0,"INC BC",0x03,0,0,0);
@@ -552,10 +588,6 @@ int Test_CALC()
 	BC_REG=0x0002;C_FLAG=1;
 	TestCode(0,"DEC BC",0x0B,0,0,0);
 	CheckCode(BC_REG==0x0001 && C_FLAG==1);
-	//
-	IX_REG=0xfffe;BC_REG=0x0002;
-	TestCode(0,"ADD IX,BC",0xdd,0x09,0,0);
-	CheckCode(IX_REG==0x0000 && N_FLAG==0 && C_FLAG==1);
 	//
 	IX_REG=0x0002;C_FLAG=1;
 	TestCode(0,"INC IX",0xdd,0x23,0,0);
@@ -592,19 +624,27 @@ int Test_CALC()
 	HL_REG=500;BC_REG=21;
 	TestCode(0,"DIV HL,BC",0xed,0xc7,0,0);
 	CheckCode(HL_REG==23 && DE_REG==17 && C_FLAG==0);
-	//
+
+	//z80–¢’è‹`–½—ß
 	A_REG=0x1;IXH_REG=0x5;
 	TestCode(0,"ADD A,IXH",0xdd,0x84,0,0);
-	CheckCode(A_REG==0x6 && N_FLAG==1 && PV_FLAG==0);
+	CheckCode(A_REG==0x6 && N_FLAG==0 && PV_FLAG==0);
+	//
+	A_REG=0x10;IXH_REG=0x5;
+	TestCode(0,"SUB A,IXH",0xdd,0x94,0,0);
+	CheckCode(A_REG==0xb && N_FLAG==1 && PV_FLAG==0 && H_FLAG==1);
 	//
 	A_REG=0x1;IXH_REG=0x5;
 	TestCode(0,"INC IXH",0xdd,0x24,0,0);
 	CheckCode(IXH_REG==0x6 && PV_FLAG==0);
 	//
+	A_REG=0x1;IXH_REG=0x10;
+	TestCode(0,"DEC IXH",0xdd,0x25,0,0);
+	CheckCode(IXH_REG==0xf && PV_FLAG==0 && H_FLAG==1);
+	//
 	A_REG=0x5;IXH_REG=0x5;
 	TestCode(0,"CP IXH",0xdd,0xbc,0,0);
 	CheckCode(Z_FLAG==1 && PV_FLAG==0);
-
 	
 	
 	return ErrorUnit;
@@ -742,7 +782,7 @@ int Test_CP()
 	//
 	A_REG=1;HL_REG=2;
 	TestCode(0,"CP (HL)",0xBE,0,2,0);
-	CheckCode(Z_FLAG==0 && C_FLAG==1);
+	CheckCode(Z_FLAG==0 && C_FLAG==1 && H_FLAG==1 && S_FLAG==1);
 	//
 	A_REG=0x001;
 	TestCode(0,"CP n",0xfe,0x1,0x00,0x00);
@@ -1201,7 +1241,7 @@ int main(int argc,char* argv[])
 	IOTaskCallback=IOTask;
 
 	int results[20]={0};
-	
+
 	results[0]=Test_LD();
 	results[1]=Test_PUSHPOP();
 	results[2]=Test_EX();
